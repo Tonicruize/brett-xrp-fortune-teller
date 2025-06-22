@@ -12,15 +12,15 @@ import { GenieGameInterface } from '@/components/GenieGameInterface';
 const Index = () => {
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currentPrice, setCurrentPrice] = useState(1.24567890);
+  const [currentPrice, setCurrentPrice] = useState(0.62567890);
   const [score, setScore] = useState(0);
   const [balance, setBalance] = useState(100);
   const [activeGame, setActiveGame] = useState(null);
 
-  // Simulate price changes (more realistic candlestick pattern)
+  // Simulate XRP/USDT price changes
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentPrice(prev => {
+      setCurrentPrice(prev =>  {
         const volatility = 0.00002;
         const trend = Math.sin(Date.now() / 10000) * 0.00001;
         const change = (Math.random() - 0.5) * volatility + trend;
@@ -55,14 +55,14 @@ const Index = () => {
                 <h1 className="text-5xl font-orbitron font-black text-white">GAME HUB</h1>
                 <div className="w-8 h-8 bg-yellow-500 transform rotate-45"></div>
               </div>
-              <p className="text-slate-400 text-xl font-orbitron">Choose your game and start winning</p>
+              <p className="text-slate-400 text-xl font-inter">Choose your game and start winning</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
               <GameCard
                 title="Genie Prediction"
                 status="active"
-                description="Predict price movements and win"
+                description="Predict XRP/USDT price movements"
                 image="/lovable-uploads/71a7ed5b-cbac-4c1d-8ccd-dbb95f5d9ef7.png"
                 onPlay={() => handlePlayGame('genie')}
               />
@@ -109,15 +109,15 @@ const Index = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <h3 className="text-yellow-500 font-orbitron font-semibold mb-2">FAIR & TRANSPARENT</h3>
-                    <p className="text-slate-400 text-sm font-orbitron">Provably fair algorithms ensure honest gameplay</p>
+                    <p className="text-slate-400 text-sm font-inter">Provably fair algorithms ensure honest gameplay</p>
                   </div>
                   <div>
                     <h3 className="text-yellow-500 font-orbitron font-semibold mb-2">INSTANT PAYOUTS</h3>
-                    <p className="text-slate-400 text-sm font-orbitron">Withdraw your winnings immediately</p>
+                    <p className="text-slate-400 text-sm font-inter">Withdraw your winnings immediately</p>
                   </div>
                   <div>
                     <h3 className="text-yellow-500 font-orbitron font-semibold mb-2">24/7 SUPPORT</h3>
-                    <p className="text-slate-400 text-sm font-orbitron">Round-the-clock customer assistance</p>
+                    <p className="text-slate-400 text-sm font-inter">Round-the-clock customer assistance</p>
                   </div>
                 </div>
               </div>
@@ -129,7 +129,7 @@ const Index = () => {
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setActiveGame(null)}
-                  className="bg-slate-800 border border-slate-600 text-white px-4 py-2 hover:bg-slate-700 font-orbitron transform -skew-x-12"
+                  className="bg-slate-800 border border-slate-600 text-white px-4 py-2 hover:bg-slate-700 font-orbitron transform -skew-x-12 transition-colors"
                 >
                   <div className="transform skew-x-12">← BACK TO HUB</div>
                 </button>

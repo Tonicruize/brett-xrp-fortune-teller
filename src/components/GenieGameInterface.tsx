@@ -28,7 +28,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
       id: '001',
       status: 'live',
       timeLeft: 45,
-      startPrice: 1.24560000,
+      startPrice: 0.62450000,
       bullPool: 1250.50,
       bearPool: 890.30,
       totalPool: 2140.80
@@ -43,14 +43,33 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     },
     {
       id: '003',
+      status: 'next',
+      timeLeft: 225,
+      bullPool: 450.80,
+      bearPool: 680.20,
+      totalPool: 1131.00
+    },
+    {
+      id: '004',
       status: 'completed',
       timeLeft: 0,
-      startPrice: 1.24480000,
-      endPrice: 1.24620000,
+      startPrice: 0.62380000,
+      endPrice: 0.62520000,
       bullPool: 2100.80,
       bearPool: 1200.40,
       totalPool: 3301.20,
       result: 'bull'
+    },
+    {
+      id: '005',
+      status: 'completed',
+      timeLeft: 0,
+      startPrice: 0.62520000,
+      endPrice: 0.62380000,
+      bullPool: 1800.60,
+      bearPool: 2400.90,
+      totalPool: 4201.50,
+      result: 'bear'
     }
   ]);
 
@@ -72,7 +91,6 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
           if (round.timeLeft > 0) {
             const newTimeLeft = round.timeLeft - 1;
             
-            // Handle round transitions
             if (newTimeLeft === 0) {
               if (round.status === 'live') {
                 return {
@@ -110,7 +128,6 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
       [roundId]: { direction, amount }
     }));
 
-    // Update round pools
     setRounds(prev => 
       prev.map(round => {
         if (round.id === roundId) {
@@ -129,66 +146,71 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Trading Pair Header */}
+      <div className="text-center">
+        <h2 className="text-3xl font-orbitron font-bold text-white mb-2">XRP/USDT</h2>
+        <p className="text-slate-400 font-inter">Predict the price movement and win rewards</p>
+      </div>
+
       {/* Stats Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="bg-slate-900 border border-slate-700 p-3">
-          <div className="flex items-center gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-slate-900 border border-slate-700 p-4 transform -skew-x-3">
+          <div className="transform skew-x-3 flex items-center gap-3">
             <Users className="w-6 h-6 text-yellow-500" />
             <div>
-              <div className="text-lg font-orbitron font-bold text-white">
+              <div className="text-xl font-orbitron font-bold text-white">
                 {stats.totalPlayers.toLocaleString()}
               </div>
-              <div className="text-slate-400 font-inter text-xs">ACTIVE PLAYERS</div>
+              <div className="text-slate-400 font-inter text-sm">ACTIVE PLAYERS</div>
             </div>
           </div>
         </Card>
 
-        <Card className="bg-slate-900 border border-slate-700 p-3">
-          <div className="flex items-center gap-2">
+        <Card className="bg-slate-900 border border-slate-700 p-4 transform -skew-x-3">
+          <div className="transform skew-x-3 flex items-center gap-3">
             <DollarSign className="w-6 h-6 text-green-500" />
             <div>
-              <div className="text-lg font-orbitron font-bold text-white">
+              <div className="text-xl font-orbitron font-bold text-white">
                 ${stats.totalPool.toLocaleString()}
               </div>
-              <div className="text-slate-400 font-inter text-xs">TOTAL POOL</div>
+              <div className="text-slate-400 font-inter text-sm">TOTAL POOL</div>
             </div>
           </div>
         </Card>
 
-        <Card className="bg-slate-900 border border-slate-700 p-3">
-          <div className="flex items-center gap-2">
+        <Card className="bg-slate-900 border border-slate-700 p-4 transform -skew-x-3">
+          <div className="transform skew-x-3 flex items-center gap-3">
             <Trophy className="w-6 h-6 text-yellow-500" />
             <div>
-              <div className="text-lg font-orbitron font-bold text-white">
+              <div className="text-xl font-orbitron font-bold text-white">
                 {stats.winRate}%
               </div>
-              <div className="text-slate-400 font-inter text-xs">WIN RATE</div>
+              <div className="text-slate-400 font-inter text-sm">WIN RATE</div>
             </div>
           </div>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Chart */}
-        <div className="lg:col-span-2">
-          <CandleChart 
-            currentPrice={currentPrice}
-            gameActive={rounds.some(r => r.status === 'live')}
-            timeLeft={rounds.find(r => r.status === 'live')?.timeLeft || 0}
-            onRoundEnd={() => {}}
-          />
-        </div>
+      {/* Betting Rounds - Horizontal Layout */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-orbitron font-bold text-white">BETTING ROUNDS</h3>
+        <BettingRounds
+          rounds={rounds}
+          onPlaceBet={handlePlaceBet}
+          userBets={userBets}
+        />
+      </div>
 
-        {/* Betting Rounds */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-orbitron font-bold text-white">BETTING ROUNDS</h3>
-          <BettingRounds
-            rounds={rounds}
-            onPlaceBet={handlePlaceBet}
-            userBets={userBets}
-          />
-        </div>
+      {/* Live Chart */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-orbitron font-bold text-white">LIVE CHART</h3>
+        <CandleChart 
+          currentPrice={currentPrice}
+          gameActive={rounds.some(r => r.status === 'live')}
+          timeLeft={rounds.find(r => r.status === 'live')?.timeLeft || 0}
+          onRoundEnd={() => {}}
+        />
       </div>
     </div>
   );
