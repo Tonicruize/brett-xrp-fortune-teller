@@ -1,7 +1,7 @@
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, TrendingDown, Clock, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock } from 'lucide-react';
 
 interface Round {
   id: string;
@@ -35,13 +35,13 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets }: BettingRoundsPro
   };
 
   const getStatusColor = (status: string) => {
-    if (status === 'LIVE') return 'text-green-400 border-green-400';
-    if (status === 'NEXT') return 'text-yellow-400 border-yellow-400';
-    return 'text-slate-400 border-slate-600';
+    if (status === 'LIVE') return 'text-green-400 border-green-400 bg-green-400/10';
+    if (status === 'NEXT') return 'text-yellow-400 border-yellow-400 bg-yellow-400/10';
+    return 'text-slate-400 border-slate-600 bg-slate-600/10';
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {rounds.map((round) => {
         const userBet = userBets[round.id];
         const bullPercentage = round.totalPool > 0 ? (round.bullPool / round.totalPool) * 100 : 50;
@@ -49,88 +49,86 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets }: BettingRoundsPro
         const status = getRoundStatus(round);
 
         return (
-          <Card key={round.id} className="bg-slate-900 border border-slate-700 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`px-3 py-1 border text-xs font-orbitron font-bold transform -skew-x-12 ${getStatusColor(status)}`}>
-                  <div className="transform skew-x-12">{status}</div>
+          <Card key={round.id} className="bg-slate-900 border border-slate-700 p-3">
+            {/* Header Row */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className={`px-2 py-1 border text-xs font-inter font-medium ${getStatusColor(status)}`}>
+                  {status}
                 </div>
-                <span className="text-slate-400 font-orbitron text-sm">#{round.id}</span>
+                <span className="text-slate-400 font-inter text-xs">#{round.id}</span>
               </div>
               
               {round.status !== 'completed' && (
-                <div className="flex items-center gap-2 text-white font-orbitron">
-                  <Clock className="w-4 h-4" />
-                  <span className="font-bold">{formatTime(round.timeLeft)}</span>
+                <div className="flex items-center gap-1 text-white font-inter text-sm">
+                  <Clock className="w-3 h-3" />
+                  <span className="font-medium">{formatTime(round.timeLeft)}</span>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* Betting Pools - Horizontal Layout */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
               {/* Bull Side */}
-              <div className="bg-slate-800 border-l-4 border-green-500 p-4 transform -skew-x-3">
-                <div className="transform skew-x-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-green-400" />
-                      <span className="font-orbitron font-bold text-green-400">BULL</span>
-                    </div>
-                    <span className="text-green-400 font-orbitron font-bold">
-                      {bullPercentage.toFixed(1)}%
-                    </span>
+              <div className="bg-slate-800 border-l-2 border-green-500 p-2">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3 text-green-400" />
+                    <span className="font-inter font-medium text-green-400 text-xs">BULL</span>
                   </div>
-                  <div className="text-white font-orbitron font-bold text-lg">
-                    ${round.bullPool.toFixed(2)}
-                  </div>
-                  <div className="w-full bg-slate-700 h-2 mt-2">
-                    <div 
-                      className="bg-green-500 h-full transition-all duration-300"
-                      style={{ width: `${bullPercentage}%` }}
-                    />
-                  </div>
+                  <span className="text-green-400 font-inter font-medium text-xs">
+                    {bullPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="text-white font-inter font-semibold text-sm">
+                  ${round.bullPool.toFixed(2)}
+                </div>
+                <div className="w-full bg-slate-700 h-1 mt-1">
+                  <div 
+                    className="bg-green-500 h-full transition-all duration-300"
+                    style={{ width: `${bullPercentage}%` }}
+                  />
                 </div>
               </div>
 
               {/* Bear Side */}
-              <div className="bg-slate-800 border-l-4 border-red-500 p-4 transform -skew-x-3">
-                <div className="transform skew-x-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <TrendingDown className="w-5 h-5 text-red-400" />
-                      <span className="font-orbitron font-bold text-red-400">BEAR</span>
-                    </div>
-                    <span className="text-red-400 font-orbitron font-bold">
-                      {bearPercentage.toFixed(1)}%
-                    </span>
+              <div className="bg-slate-800 border-l-2 border-red-500 p-2">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1">
+                    <TrendingDown className="w-3 h-3 text-red-400" />
+                    <span className="font-inter font-medium text-red-400 text-xs">BEAR</span>
                   </div>
-                  <div className="text-white font-orbitron font-bold text-lg">
-                    ${round.bearPool.toFixed(2)}
-                  </div>
-                  <div className="w-full bg-slate-700 h-2 mt-2">
-                    <div 
-                      className="bg-red-500 h-full transition-all duration-300"
-                      style={{ width: `${bearPercentage}%` }}
-                    />
-                  </div>
+                  <span className="text-red-400 font-inter font-medium text-xs">
+                    {bearPercentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="text-white font-inter font-semibold text-sm">
+                  ${round.bearPool.toFixed(2)}
+                </div>
+                <div className="w-full bg-slate-700 h-1 mt-1">
+                  <div 
+                    className="bg-red-500 h-full transition-all duration-300"
+                    style={{ width: `${bearPercentage}%` }}
+                  />
                 </div>
               </div>
             </div>
 
             {/* Price Information */}
             {round.status === 'completed' && (
-              <div className="bg-slate-800 p-3 mb-4 transform -skew-x-6">
-                <div className="transform skew-x-6 grid grid-cols-3 gap-4 text-center font-orbitron text-sm">
+              <div className="bg-slate-800 p-2 mb-3">
+                <div className="grid grid-cols-3 gap-2 text-center font-inter text-xs">
                   <div>
-                    <div className="text-slate-400">START PRICE</div>
-                    <div className="text-white font-bold">${round.startPrice?.toFixed(6)}</div>
+                    <div className="text-slate-400 mb-1">START</div>
+                    <div className="text-white font-medium">${round.startPrice?.toFixed(5)}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">END PRICE</div>
-                    <div className="text-white font-bold">${round.endPrice?.toFixed(6)}</div>
+                    <div className="text-slate-400 mb-1">END</div>
+                    <div className="text-white font-medium">${round.endPrice?.toFixed(5)}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">RESULT</div>
-                    <div className={`font-bold ${round.result === 'bull' ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className="text-slate-400 mb-1">RESULT</div>
+                    <div className={`font-medium text-xs ${round.result === 'bull' ? 'text-green-400' : 'text-red-400'}`}>
                       {round.result?.toUpperCase()}
                     </div>
                   </div>
@@ -138,51 +136,47 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets }: BettingRoundsPro
               </div>
             )}
 
-            {/* Betting Actions */}
+            {/* Betting Actions - Horizontal */}
             {round.status === 'next' && !userBet && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={() => onPlaceBet(round.id, 'bull', 10)}
-                  className="h-12 bg-green-700 hover:bg-green-600 font-orbitron font-bold transform -skew-x-12"
+                  className="h-8 bg-green-700 hover:bg-green-600 font-inter font-medium text-xs"
                 >
-                  <div className="transform skew-x-12 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    BET BULL
-                  </div>
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  BET BULL
                 </Button>
                 <Button
                   onClick={() => onPlaceBet(round.id, 'bear', 10)}
-                  className="h-12 bg-red-700 hover:bg-red-600 font-orbitron font-bold transform -skew-x-12"
+                  className="h-8 bg-red-700 hover:bg-red-600 font-inter font-medium text-xs"
                 >
-                  <div className="transform skew-x-12 flex items-center gap-2">
-                    <TrendingDown className="w-5 h-5" />
-                    BET BEAR
-                  </div>
+                  <TrendingDown className="w-3 h-3 mr-1" />
+                  BET BEAR
                 </Button>
               </div>
             )}
 
             {/* User Bet Display */}
             {userBet && (
-              <div className={`p-3 border transform -skew-x-6 ${
+              <div className={`p-2 border ${
                 userBet.direction === 'bull' 
                   ? 'border-green-500 bg-green-900/20' 
                   : 'border-red-500 bg-red-900/20'
               }`}>
-                <div className="transform skew-x-6 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
                     {userBet.direction === 'bull' ? (
-                      <TrendingUp className="w-4 h-4 text-green-400" />
+                      <TrendingUp className="w-3 h-3 text-green-400" />
                     ) : (
-                      <TrendingDown className="w-4 h-4 text-red-400" />
+                      <TrendingDown className="w-3 h-3 text-red-400" />
                     )}
-                    <span className={`font-orbitron font-bold ${
+                    <span className={`font-inter font-medium text-xs ${
                       userBet.direction === 'bull' ? 'text-green-400' : 'text-red-400'
                     }`}>
                       YOUR BET: {userBet.direction.toUpperCase()}
                     </span>
                   </div>
-                  <span className="text-white font-orbitron font-bold">
+                  <span className="text-white font-inter font-medium text-xs">
                     ${userBet.amount.toFixed(2)}
                   </span>
                 </div>

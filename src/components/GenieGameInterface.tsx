@@ -129,47 +129,47 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-slate-900 border border-slate-700 p-4">
-          <div className="flex items-center gap-3">
-            <Users className="w-8 h-8 text-yellow-500" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Card className="bg-slate-900 border border-slate-700 p-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-6 h-6 text-yellow-500" />
             <div>
-              <div className="text-2xl font-orbitron font-bold text-white">
+              <div className="text-lg font-orbitron font-bold text-white">
                 {stats.totalPlayers.toLocaleString()}
               </div>
-              <div className="text-slate-400 font-orbitron text-sm">ACTIVE PLAYERS</div>
+              <div className="text-slate-400 font-inter text-xs">ACTIVE PLAYERS</div>
             </div>
           </div>
         </Card>
 
-        <Card className="bg-slate-900 border border-slate-700 p-4">
-          <div className="flex items-center gap-3">
-            <DollarSign className="w-8 h-8 text-green-500" />
+        <Card className="bg-slate-900 border border-slate-700 p-3">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-6 h-6 text-green-500" />
             <div>
-              <div className="text-2xl font-orbitron font-bold text-white">
+              <div className="text-lg font-orbitron font-bold text-white">
                 ${stats.totalPool.toLocaleString()}
               </div>
-              <div className="text-slate-400 font-orbitron text-sm">TOTAL POOL</div>
+              <div className="text-slate-400 font-inter text-xs">TOTAL POOL</div>
             </div>
           </div>
         </Card>
 
-        <Card className="bg-slate-900 border border-slate-700 p-4">
-          <div className="flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-yellow-500" />
+        <Card className="bg-slate-900 border border-slate-700 p-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-yellow-500" />
             <div>
-              <div className="text-2xl font-orbitron font-bold text-white">
+              <div className="text-lg font-orbitron font-bold text-white">
                 {stats.winRate}%
               </div>
-              <div className="text-slate-400 font-orbitron text-sm">WIN RATE</div>
+              <div className="text-slate-400 font-inter text-xs">WIN RATE</div>
             </div>
           </div>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Chart */}
         <div className="lg:col-span-2">
           <CandleChart 
@@ -181,8 +181,8 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
         </div>
 
         {/* Betting Rounds */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-orbitron font-bold text-white mb-4">BETTING ROUNDS</h3>
+        <div className="space-y-3">
+          <h3 className="text-lg font-orbitron font-bold text-white">BETTING ROUNDS</h3>
           <BettingRounds
             rounds={rounds}
             onPlaceBet={handlePlaceBet}
