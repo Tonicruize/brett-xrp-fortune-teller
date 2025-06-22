@@ -1,23 +1,18 @@
 
 import { useState, useEffect } from 'react';
 import { GameHeader } from '@/components/GameHeader';
-import { PredictionCard } from '@/components/PredictionCard';
 import { GameCard } from '@/components/GameCard';
 import { Footer } from '@/components/Footer';
 import { UserStats } from '@/components/UserStats';
 import { WalletInfo } from '@/components/WalletInfo';
 import { AuthModal } from '@/components/AuthModal';
 import { SocialSidebar } from '@/components/SocialSidebar';
-import { CandleChart } from '@/components/CandleChart';
+import { GenieGameInterface } from '@/components/GenieGameInterface';
 
 const Index = () => {
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentPrice, setCurrentPrice] = useState(1.24567890);
-  const [gameActive, setGameActive] = useState(false);
-  const [prediction, setPrediction] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(90);
-  const [initialPrice, setInitialPrice] = useState(0);
   const [score, setScore] = useState(0);
   const [balance, setBalance] = useState(100);
   const [activeGame, setActiveGame] = useState(null);
@@ -35,42 +30,6 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Game timer
-  useEffect(() => {
-    let interval;
-    if (gameActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && prediction) {
-      const priceChange = ((currentPrice - initialPrice) / initialPrice) * 100;
-      const isWin = prediction === 'up' ? priceChange > 0 : priceChange < 0;
-      
-      if (isWin) {
-        setScore(prev => prev + 100);
-        setBalance(prev => prev + 10);
-      }
-      
-      setGameActive(false);
-      setTimeLeft(90);
-      setPrediction(null);
-      setInitialPrice(0);
-    }
-
-    return () => clearInterval(interval);
-  }, [gameActive, timeLeft, prediction, currentPrice, initialPrice]);
-
-  const handlePrediction = (direction) => {
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-    setPrediction(direction);
-    setGameActive(true);
-    setTimeLeft(90);
-    setInitialPrice(currentPrice);
-  };
-
   const handleAuth = (userData) => {
     setUser(userData);
     setShowAuthModal(false);
@@ -80,10 +39,6 @@ const Index = () => {
     if (gameName === 'genie') {
       setActiveGame('genie');
     }
-  };
-
-  const handleRoundEnd = (finalPrice) => {
-    console.log('Round ended with price:', finalPrice);
   };
 
   return (
@@ -170,58 +125,26 @@ const Index = () => {
           </>
         ) : (
           <div className="space-y-8">
-            <div className="flex items-center gap-4 mb-8">
-              <button 
-                onClick={() => setActiveGame(null)}
-                className="bg-slate-800 border border-slate-600 text-white px-4 py-2 hover:bg-slate-700 font-orbitron transform -skew-x-12"
-              >
-                <div className="transform skew-x-12">← BACK TO HUB</div>
-              </button>
-              <h2 className="text-2xl font-orbitron font-bold text-white">GENIE PREDICTION GAME</h2>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              <div className="space-y-6">
-                <UserStats score={score} balance={balance} user={user} />
-                <WalletInfo user={user} balance={balance} />
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setActiveGame(null)}
+                  className="bg-slate-800 border border-slate-600 text-white px-4 py-2 hover:bg-slate-700 font-orbitron transform -skew-x-12"
+                >
+                  <div className="transform skew-x-12">← BACK TO HUB</div>
+                </button>
+                <h2 className="text-2xl font-orbitron font-bold text-white">GENIE PREDICTION GAME</h2>
               </div>
 
-              <div className="lg:col-span-2 space-y-6">
-                <CandleChart 
-                  currentPrice={currentPrice}
-                  gameActive={gameActive}
-                  timeLeft={timeLeft}
-                  onRoundEnd={handleRoundEnd}
-                />
-                <PredictionCard 
-                  currentPrice={currentPrice}
-                  gameActive={gameActive}
-                  timeLeft={timeLeft}
-                  prediction={prediction}
-                  onPrediction={handlePrediction}
-                  initialPrice={initialPrice}
-                />
-              </div>
-
-              <div className="bg-slate-900 border border-slate-700 p-6">
-                <h3 className="text-xl font-orbitron font-bold text-white mb-4">RECENT WINNERS</h3>
-                <div className="space-y-3">
-                  {[
-                    { name: "Player1", amount: "+$124.50" },
-                    { name: "Player2", amount: "+$89.20" },
-                    { name: "Player3", amount: "+$156.80" },
-                    { name: "Player4", amount: "+$67.40" },
-                  ].map((winner, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-slate-800 transform -skew-x-6">
-                      <div className="transform skew-x-6 flex justify-between w-full">
-                        <span className="text-white font-orbitron">{winner.name}</span>
-                        <span className="text-green-400 font-orbitron font-semibold">{winner.amount}</span>
-                      </div>
-                    </div>
-                  ))}
+              {user && (
+                <div className="flex items-center gap-4">
+                  <UserStats score={score} balance={balance} user={user} />
+                  <WalletInfo user={user} balance={balance} />
                 </div>
-              </div>
+              )}
             </div>
+
+            <GenieGameInterface currentPrice={currentPrice} user={user} />
           </div>
         )}
       </div>
