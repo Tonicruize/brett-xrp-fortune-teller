@@ -7,6 +7,8 @@ import { Footer } from '@/components/Footer';
 import { UserStats } from '@/components/UserStats';
 import { WalletInfo } from '@/components/WalletInfo';
 import { AuthModal } from '@/components/AuthModal';
+import { SocialSidebar } from '@/components/SocialSidebar';
+import { CandleChart } from '@/components/CandleChart';
 
 const Index = () => {
   const [user, setUser] = useState(null);
@@ -20,11 +22,13 @@ const Index = () => {
   const [balance, setBalance] = useState(100);
   const [activeGame, setActiveGame] = useState(null);
 
-  // Simulate price changes
+  // Simulate price changes (more realistic candlestick pattern)
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentPrice(prev => {
-        const change = (Math.random() - 0.5) * 0.00001;
+        const volatility = 0.00002;
+        const trend = Math.sin(Date.now() / 10000) * 0.00001;
+        const change = (Math.random() - 0.5) * volatility + trend;
         return Math.max(0, prev + change);
       });
     }, 1000);
@@ -78,20 +82,25 @@ const Index = () => {
     }
   };
 
+  const handleRoundEnd = (finalPrice) => {
+    console.log('Round ended with price:', finalPrice);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-slate-950 font-orbitron">
       <GameHeader user={user} onShowAuth={() => setShowAuthModal(true)} />
+      <SocialSidebar />
       
       <div className="container mx-auto px-6 py-8">
         {!activeGame ? (
           <>
             <div className="text-center mb-12">
               <div className="flex items-center justify-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-yellow-500 transform rotate-45"></div>
-                <h1 className="text-5xl font-bold text-white">GAME HUB</h1>
-                <div className="w-12 h-12 bg-yellow-500 transform rotate-45"></div>
+                <div className="w-8 h-8 bg-yellow-500 transform rotate-45"></div>
+                <h1 className="text-5xl font-orbitron font-black text-white">GAME HUB</h1>
+                <div className="w-8 h-8 bg-yellow-500 transform rotate-45"></div>
               </div>
-              <p className="text-slate-400 text-xl">Choose your game and start winning</p>
+              <p className="text-slate-400 text-xl font-orbitron">Choose your game and start winning</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
@@ -139,20 +148,22 @@ const Index = () => {
               />
             </div>
 
-            <div className="bg-slate-900 border-2 border-slate-700 rounded p-8 text-center">
-              <h2 className="text-2xl font-bold text-white mb-4">Why Choose BRETT Casino?</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <h3 className="text-yellow-500 font-semibold mb-2">Fair & Transparent</h3>
-                  <p className="text-slate-400 text-sm">Provably fair algorithms ensure honest gameplay</p>
-                </div>
-                <div>
-                  <h3 className="text-yellow-500 font-semibold mb-2">Instant Payouts</h3>
-                  <p className="text-slate-400 text-sm">Withdraw your winnings immediately</p>
-                </div>
-                <div>
-                  <h3 className="text-yellow-500 font-semibold mb-2">24/7 Support</h3>
-                  <p className="text-slate-400 text-sm">Round-the-clock customer assistance</p>
+            <div className="bg-slate-900 border border-slate-700 p-8 text-center transform -skew-x-3">
+              <div className="transform skew-x-3">
+                <h2 className="text-2xl font-orbitron font-bold text-white mb-4">WHY CHOOSE BRETT CASINO?</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <h3 className="text-yellow-500 font-orbitron font-semibold mb-2">FAIR & TRANSPARENT</h3>
+                    <p className="text-slate-400 text-sm font-orbitron">Provably fair algorithms ensure honest gameplay</p>
+                  </div>
+                  <div>
+                    <h3 className="text-yellow-500 font-orbitron font-semibold mb-2">INSTANT PAYOUTS</h3>
+                    <p className="text-slate-400 text-sm font-orbitron">Withdraw your winnings immediately</p>
+                  </div>
+                  <div>
+                    <h3 className="text-yellow-500 font-orbitron font-semibold mb-2">24/7 SUPPORT</h3>
+                    <p className="text-slate-400 text-sm font-orbitron">Round-the-clock customer assistance</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -162,20 +173,26 @@ const Index = () => {
             <div className="flex items-center gap-4 mb-8">
               <button 
                 onClick={() => setActiveGame(null)}
-                className="bg-slate-800 border border-slate-600 text-white px-4 py-2 rounded hover:bg-slate-700"
+                className="bg-slate-800 border border-slate-600 text-white px-4 py-2 hover:bg-slate-700 font-orbitron transform -skew-x-12"
               >
-                ← Back to Hub
+                <div className="transform skew-x-12">← BACK TO HUB</div>
               </button>
-              <h2 className="text-2xl font-bold text-white">Genie Prediction Game</h2>
+              <h2 className="text-2xl font-orbitron font-bold text-white">GENIE PREDICTION GAME</h2>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               <div className="space-y-6">
                 <UserStats score={score} balance={balance} user={user} />
                 <WalletInfo user={user} balance={balance} />
               </div>
 
-              <div>
+              <div className="lg:col-span-2 space-y-6">
+                <CandleChart 
+                  currentPrice={currentPrice}
+                  gameActive={gameActive}
+                  timeLeft={timeLeft}
+                  onRoundEnd={handleRoundEnd}
+                />
                 <PredictionCard 
                   currentPrice={currentPrice}
                   gameActive={gameActive}
@@ -186,8 +203,8 @@ const Index = () => {
                 />
               </div>
 
-              <div className="bg-slate-900 border-2 border-slate-700 rounded p-6">
-                <h3 className="text-xl font-bold text-white mb-4">Recent Winners</h3>
+              <div className="bg-slate-900 border border-slate-700 p-6">
+                <h3 className="text-xl font-orbitron font-bold text-white mb-4">RECENT WINNERS</h3>
                 <div className="space-y-3">
                   {[
                     { name: "Player1", amount: "+$124.50" },
@@ -195,9 +212,11 @@ const Index = () => {
                     { name: "Player3", amount: "+$156.80" },
                     { name: "Player4", amount: "+$67.40" },
                   ].map((winner, index) => (
-                    <div key={index} className="flex justify-between items-center p-3 bg-slate-800 rounded">
-                      <span className="text-white">{winner.name}</span>
-                      <span className="text-green-400 font-semibold">{winner.amount}</span>
+                    <div key={index} className="flex justify-between items-center p-3 bg-slate-800 transform -skew-x-6">
+                      <div className="transform skew-x-6 flex justify-between w-full">
+                        <span className="text-white font-orbitron">{winner.name}</span>
+                        <span className="text-green-400 font-orbitron font-semibold">{winner.amount}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
