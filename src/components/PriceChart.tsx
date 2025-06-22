@@ -19,54 +19,83 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
   const [priceStats, setPriceStats] = useState({
     high: 0,
     low: 0,
-    change24h: 0
+    change24h: 0,
+    volume: 0
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch real XRP price data
+  // Fetch real XRP price data with higher precision
   const fetchXRPPrice = async () => {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true');
-      const data = await response.json();
-      const price = data.ripple.usd;
-      const change = data.ripple.usd_24h_change || 0;
-      
-      onPriceUpdate(price);
-      
-      const now = new Date();
-      const newDataPoint: PriceData = {
-        time: now.toLocaleTimeString(),
-        price: price,
-        timestamp: now.getTime()
-      };
+      // Use multiple APIs for better precision and reliability
+      const [coinGeckoResponse, alternativeResponse] = await Promise.allSettled([
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&precision=8'),
+        fetch('https://api.coinbase.com/v2/exchange-rates?currency=XRP')
+      ]);
 
-      setPriceHistory(prev => {
-        const updated = [...prev, newDataPoint];
-        // Keep only last 20 data points
-        return updated.slice(-20);
-      });
+      let price = 0;
+      let change = 0;
+      let volume = 0;
 
-      // Update 24h stats
-      setPriceStats(prev => ({
-        ...prev,
-        change24h: change
-      }));
+      // Primary source: CoinGecko with high precision
+      if (coinGeckoResponse.status === 'fulfilled' && coinGeckoResponse.value.ok) {
+        const data = await coinGeckoResponse.value.json();
+        price = data.ripple.usd;
+        change = data.ripple.usd_24h_change || 0;
+        volume = data.ripple.usd_24h_vol || 0;
+      } 
+      // Fallback: Coinbase API
+      else if (alternativeResponse.status === 'fulfilled' && alternativeResponse.value.ok) {
+        const data = await alternativeResponse.value.json();
+        price = parseFloat(data.data.rates.USD);
+        console.log('Using Coinbase API fallback, price:', price);
+      }
 
-      setIsLoading(false);
+      if (price > 0) {
+        onPriceUpdate(price);
+        
+        const now = new Date();
+        const newDataPoint: PriceData = {
+          time: now.toLocaleTimeString(),
+          price: price,
+          timestamp: now.getTime()
+        };
+
+        setPriceHistory(prev => {
+          const updated = [...prev, newDataPoint];
+          // Keep only last 60 data points (1 hour of minute data)
+          return updated.slice(-60);
+        });
+
+        // Update stats
+        setPriceStats(prev => {
+          const newStats = {
+            change24h: change,
+            volume: volume,
+            high: Math.max(prev.high, price),
+            low: prev.low === 0 ? price : Math.min(prev.low, price)
+          };
+          return newStats;
+        });
+
+        setIsLoading(false);
+        console.log('XRP Price updated:', price, 'Change:', change + '%');
+      }
     } catch (error) {
       console.error('Error fetching XRP price:', error);
       setIsLoading(false);
     }
   };
 
-  // Fetch historical data for chart initialization
+  // Fetch minute-level historical data for more precision
   const fetchHistoricalData = async () => {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=hourly');
+      // Get hourly data for the last day (more granular than daily)
+      const response = await fetch('https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1');
       const data = await response.json();
       
       if (data.prices) {
-        const prices = data.prices.slice(-20); // Last 20 hours
+        const prices = data.prices.slice(-60); // Last 60 data points
         const formattedData: PriceData[] = prices.map(([timestamp, price]: [number, number]) => ({
           time: new Date(timestamp).toLocaleTimeString(),
           price: price,
@@ -77,11 +106,11 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
         
         // Calculate high/low from historical data
         const priceValues = formattedData.map(d => d.price);
-        setPriceStats({
+        setPriceStats(prev => ({
+          ...prev,
           high: Math.max(...priceValues),
-          low: Math.min(...priceValues),
-          change24h: 0
-        });
+          low: Math.min(...priceValues)
+        }));
       }
     } catch (error) {
       console.error('Error fetching historical data:', error);
@@ -93,8 +122,8 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
     fetchHistoricalData();
     fetchXRPPrice();
 
-    // Update price every 10 seconds
-    const interval = setInterval(fetchXRPPrice, 10000);
+    // Update price every 5 seconds for more frequent updates
+    const interval = setInterval(fetchXRPPrice, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -110,7 +139,7 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
         <div className="flex items-center gap-2 text-sm">
           <div className={`flex items-center gap-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
             {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            <span>{isPositive ? '+' : ''}{priceStats.change24h.toFixed(2)}%</span>
+            <span>{isPositive ? '+' : ''}{priceStats.change24h.toFixed(3)}%</span>
           </div>
         </div>
       </div>
@@ -119,7 +148,7 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
       <div className="h-48 bg-slate-900/50 rounded-lg p-4 mb-4">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-gray-400">Loading chart data...</div>
+            <div className="text-gray-400">Loading precise chart data...</div>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
@@ -132,8 +161,8 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
               />
               <YAxis 
                 tick={{ fontSize: 10, fill: '#9CA3AF' }}
-                domain={['dataMin - 0.01', 'dataMax + 0.01']}
-                tickFormatter={(value) => `$${value.toFixed(4)}`}
+                domain={['dataMin - 0.001', 'dataMax + 0.001']}
+                tickFormatter={(value) => `$${value.toFixed(6)}`}
               />
               <Tooltip 
                 contentStyle={{ 
@@ -142,39 +171,43 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
                   borderRadius: '8px',
                   color: '#fff'
                 }}
-                formatter={(value: number) => [`$${value.toFixed(4)}`, 'Price']}
+                formatter={(value: number) => [`$${value.toFixed(6)}`, 'Price']}
               />
               <Line 
                 type="monotone" 
                 dataKey="price" 
                 stroke="#06B6D4" 
                 strokeWidth={2}
-                dot={{ fill: '#06B6D4', strokeWidth: 2, r: 3 }}
-                activeDot={{ r: 5, stroke: '#06B6D4', strokeWidth: 2 }}
+                dot={{ fill: '#06B6D4', strokeWidth: 2, r: 2 }}
+                activeDot={{ r: 4, stroke: '#06B6D4', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 text-center">
+      <div className="grid grid-cols-4 gap-3 text-center">
         <div className="bg-slate-900/30 rounded p-2">
           <p className="text-xs text-gray-400">24h High</p>
-          <p className="text-sm font-semibold text-green-400">${priceStats.high.toFixed(4)}</p>
+          <p className="text-sm font-semibold text-green-400">${priceStats.high.toFixed(6)}</p>
         </div>
         <div className="bg-slate-900/30 rounded p-2">
           <p className="text-xs text-gray-400">Current</p>
-          <p className="text-sm font-semibold text-cyan-400">${currentPrice.toFixed(4)}</p>
+          <p className="text-sm font-semibold text-cyan-400">${currentPrice.toFixed(6)}</p>
         </div>
         <div className="bg-slate-900/30 rounded p-2">
           <p className="text-xs text-gray-400">24h Low</p>
-          <p className="text-sm font-semibold text-red-400">${priceStats.low.toFixed(4)}</p>
+          <p className="text-sm font-semibold text-red-400">${priceStats.low.toFixed(6)}</p>
+        </div>
+        <div className="bg-slate-900/30 rounded p-2">
+          <p className="text-xs text-gray-400">Volume</p>
+          <p className="text-xs font-semibold text-purple-400">${(priceStats.volume / 1000000).toFixed(1)}M</p>
         </div>
       </div>
 
       <div className="mt-4 text-center">
         <p className="text-xs text-gray-500">
-          📊 Live XRP data from CoinGecko API • Updates every 10 seconds
+          🔥 High-precision XRP data • Updates every 5 seconds • 6 decimal precision
         </p>
       </div>
     </Card>
