@@ -1,4 +1,3 @@
-
 import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -24,8 +23,9 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
     volume: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [previousPrice, setPreviousPrice] = useState(0);
 
-  // Real-time XRP price fetching with 500ms updates
+  // Real-time XRP price fetching with maximum precision
   const fetchXRPPrice = async () => {
     try {
       const apiCalls = [
@@ -41,7 +41,7 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
 
       if (response.url.includes('coingecko')) {
         const data = await response.json();
-        price = data.ripple.usd;
+        price = parseFloat(data.ripple.usd);
         change = data.ripple.usd_24h_change || 0;
         volume = data.ripple.usd_24h_vol || 0;
       } else if (response.url.includes('coinbase')) {
@@ -49,10 +49,11 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
         price = parseFloat(data.data.rates.USD);
       } else {
         const data = await response.json();
-        price = data.USD;
+        price = parseFloat(data.USD);
       }
 
       if (price > 0) {
+        setPreviousPrice(currentPrice);
         onPriceUpdate(price);
         
         const now = new Date();
@@ -94,6 +95,7 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
   }, []);
 
   const isPositive = priceStats.change24h >= 0;
+  const priceDirection = currentPrice > previousPrice ? 'up' : currentPrice < previousPrice ? 'down' : 'same';
 
   return (
     <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
@@ -115,6 +117,31 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
           </div>
         </div>
 
+        {/* Live Price Display with Rolling Animation */}
+        <div className="text-center mb-6 p-6 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border-2 border-indigo-500/20">
+          <p className="text-slate-400 text-sm mb-2">Live XRP Price</p>
+          <div className={`text-4xl font-mono font-black transition-all duration-300 ${
+            priceDirection === 'up' ? 'text-green-400 animate-pulse' : 
+            priceDirection === 'down' ? 'text-red-400 animate-pulse' : 
+            'text-indigo-400'
+          }`}>
+            <span className="inline-block transform transition-transform duration-200 hover:scale-105">
+              ${currentPrice.toFixed(8)}
+            </span>
+          </div>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            {priceDirection === 'up' && <TrendingUp className="w-4 h-4 text-green-400 animate-bounce" />}
+            {priceDirection === 'down' && <TrendingDown className="w-4 h-4 text-red-400 animate-bounce" />}
+            <span className={`text-sm font-semibold ${
+              priceDirection === 'up' ? 'text-green-400' : 
+              priceDirection === 'down' ? 'text-red-400' : 
+              'text-slate-400'
+            }`}>
+              {priceDirection === 'up' ? 'Rising' : priceDirection === 'down' ? 'Falling' : 'Stable'}
+            </span>
+          </div>
+        </div>
+
         <div className="h-64 bg-slate-800/50 rounded-xl p-4 mb-6 border border-slate-700">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
@@ -132,8 +159,8 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
                 />
                 <YAxis 
                   tick={{ fontSize: 11, fill: '#94A3B8' }}
-                  domain={['dataMin - 0.00001', 'dataMax + 0.00001']}
-                  tickFormatter={(value) => `$${value.toFixed(6)}`}
+                  domain={['dataMin - 0.000001', 'dataMax + 0.000001']}
+                  tickFormatter={(value) => `$${value.toFixed(8)}`}
                   axisLine={{ stroke: '#475569' }}
                 />
                 <Tooltip 
@@ -193,7 +220,7 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
 
         <div className="mt-4 text-center">
           <p className="text-xs text-slate-500">
-            Live updates every 500ms • Full precision pricing
+            Live updates every 500ms • Full 8-decimal precision • No approximation
           </p>
         </div>
       </div>
