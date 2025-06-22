@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { GameHeader } from '@/components/GameHeader';
 import { PredictionCard } from '@/components/PredictionCard';
@@ -6,29 +5,17 @@ import { UserStats } from '@/components/UserStats';
 import { PriceChart } from '@/components/PriceChart';
 import { WalletInfo } from '@/components/WalletInfo';
 import { AuthModal } from '@/components/AuthModal';
-import { Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 const Index = () => {
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [currentPrice, setCurrentPrice] = useState(0.5234);
+  const [currentPrice, setCurrentPrice] = useState(0);
   const [gameActive, setGameActive] = useState(false);
   const [prediction, setPrediction] = useState(null);
   const [timeLeft, setTimeLeft] = useState(60);
   const [score, setScore] = useState(0);
   const [balance, setBalance] = useState(100);
-
-  // Mock price updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPrice(prev => {
-        const change = (Math.random() - 0.5) * 0.01;
-        return Math.max(0.4, prev + change);
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Game timer
   useEffect(() => {
@@ -60,6 +47,10 @@ const Index = () => {
   const handleAuth = (userData) => {
     setUser(userData);
     setShowAuthModal(false);
+  };
+
+  const handlePriceUpdate = (newPrice: number) => {
+    setCurrentPrice(newPrice);
   };
 
   return (
@@ -97,7 +88,7 @@ const Index = () => {
 
             {/* Center Column - Game */}
             <div className="space-y-6">
-              <PriceChart currentPrice={currentPrice} />
+              <PriceChart currentPrice={currentPrice} onPriceUpdate={handlePriceUpdate} />
               <PredictionCard 
                 currentPrice={currentPrice}
                 gameActive={gameActive}
