@@ -1,3 +1,4 @@
+
 import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -24,17 +25,15 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Ultra-fast XRP price fetching with minimal delay
+  // Real-time XRP price fetching with 500ms updates
   const fetchXRPPrice = async () => {
     try {
-      // Use fastest API endpoints with Promise.race for immediate response
       const apiCalls = [
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&precision=8'),
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&precision=full'),
         fetch('https://api.coinbase.com/v2/exchange-rates?currency=XRP'),
         fetch('https://min-api.cryptocompare.com/data/price?fsym=XRP&tsyms=USD')
       ];
 
-      // Get the fastest response
       const response = await Promise.race(apiCalls);
       let price = 0;
       let change = 0;
@@ -45,15 +44,12 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
         price = data.ripple.usd;
         change = data.ripple.usd_24h_change || 0;
         volume = data.ripple.usd_24h_vol || 0;
-        console.log('CoinGecko ultra-fast update:', price);
       } else if (response.url.includes('coinbase')) {
         const data = await response.json();
         price = parseFloat(data.data.rates.USD);
-        console.log('Coinbase ultra-fast update:', price);
-      } else if (response.url.includes('cryptocompare')) {
+      } else {
         const data = await response.json();
         price = data.USD;
-        console.log('CryptoCompare ultra-fast update:', price);
       }
 
       if (price > 0) {
@@ -73,155 +69,133 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
 
         setPriceHistory(prev => {
           const updated = [...prev, newDataPoint];
-          // Keep last 120 data points (2 minutes of second-level data)
-          return updated.slice(-120);
+          return updated.slice(-60); // Keep last 60 data points
         });
 
-        // Update stats
-        setPriceStats(prev => {
-          const newStats = {
-            change24h: change,
-            volume: volume,
-            high: Math.max(prev.high, price),
-            low: prev.low === 0 ? price : Math.min(prev.low, price)
-          };
-          return newStats;
-        });
+        setPriceStats(prev => ({
+          change24h: change,
+          volume: volume,
+          high: Math.max(prev.high, price),
+          low: prev.low === 0 ? price : Math.min(prev.low, price)
+        }));
 
         setIsLoading(false);
-        console.log('⚡ Ultra-fast XRP update:', price.toFixed(8), 'Change:', change.toFixed(3) + '%');
       }
     } catch (error) {
-      console.error('Error in ultra-fast XRP fetch:', error);
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch second-level historical data
-  const fetchHistoricalData = async () => {
-    try {
-      const response = await fetch('https://api.coingecko.com/api/v3/coins/ripple/market_chart?vs_currency=usd&days=1&interval=minute');
-      const data = await response.json();
-      
-      if (data.prices) {
-        const prices = data.prices.slice(-120); // Last 120 minutes
-        const formattedData: PriceData[] = prices.map(([timestamp, price]: [number, number]) => ({
-          time: new Date(timestamp).toLocaleTimeString('en-US', { 
-            hour12: false, 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
-          price: price,
-          timestamp: timestamp
-        }));
-        
-        setPriceHistory(formattedData);
-        
-        const priceValues = formattedData.map(d => d.price);
-        setPriceStats(prev => ({
-          ...prev,
-          high: Math.max(...priceValues),
-          low: Math.min(...priceValues)
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching historical data:', error);
+      console.error('Error fetching XRP price:', error);
     }
   };
 
   useEffect(() => {
-    // Initial data fetch
-    fetchHistoricalData();
     fetchXRPPrice();
-
-    // Update every 1 second for ultra-fast updates
-    const interval = setInterval(fetchXRPPrice, 1000);
+    // Update every 500ms for real-time feel
+    const interval = setInterval(fetchXRPPrice, 500);
     return () => clearInterval(interval);
   }, []);
 
   const isPositive = priceStats.change24h >= 0;
 
   return (
-    <Card className="bg-slate-800/50 backdrop-blur-sm border-purple-500/20 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Activity className="text-cyan-400 w-5 h-5 animate-pulse" />
-          XRP/USD Ultra-Fast Chart
-        </h3>
-        <div className="flex items-center gap-2 text-sm">
-          <div className={`flex items-center gap-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-            {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            <span>{isPositive ? '+' : ''}{priceStats.change24h.toFixed(3)}%</span>
+    <Card className="bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Activity className="text-indigo-400 w-6 h-6 animate-pulse" />
+            <h3 className="text-xl font-bold text-white">XRP/USD Live Chart</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
+              isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+            }`}>
+              {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <span className="font-semibold">
+                {isPositive ? '+' : ''}{priceStats.change24h.toFixed(2)}%
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Ultra-fast real-time chart */}
-      <div className="h-48 bg-slate-900/50 rounded-lg p-4 mb-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-gray-400 animate-pulse">Loading ultra-fast data...</div>
+        <div className="h-64 bg-slate-800/50 rounded-xl p-4 mb-6 border border-slate-700">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-slate-400 animate-pulse">Loading live data...</div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={priceHistory} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+                <XAxis 
+                  dataKey="time" 
+                  tick={{ fontSize: 11, fill: '#94A3B8' }}
+                  interval="preserveStartEnd"
+                  axisLine={{ stroke: '#475569' }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11, fill: '#94A3B8' }}
+                  domain={['dataMin - 0.00001', 'dataMax + 0.00001']}
+                  tickFormatter={(value) => `$${value.toFixed(6)}`}
+                  axisLine={{ stroke: '#475569' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#0F172A', 
+                    border: '2px solid #4F46E5',
+                    borderRadius: '12px',
+                    color: '#fff',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                  }}
+                  formatter={(value: number) => [`$${value.toFixed(8)}`, 'Price']}
+                  labelStyle={{ color: '#E2E8F0' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="price" 
+                  stroke="url(#priceGradient)" 
+                  strokeWidth={3}
+                  dot={false}
+                  activeDot={{ 
+                    r: 6, 
+                    stroke: '#4F46E5', 
+                    strokeWidth: 3,
+                    fill: '#FFFFFF'
+                  }}
+                />
+                <defs>
+                  <linearGradient id="priceGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#4F46E5" />
+                    <stop offset="50%" stopColor="#06B6D4" />
+                    <stop offset="100%" stopColor="#10B981" />
+                  </linearGradient>
+                </defs>
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-gradient-to-br from-green-500/10 to-green-600/5 border border-green-500/20 rounded-lg p-3 text-center">
+            <p className="text-xs text-green-400 font-medium mb-1">24h High</p>
+            <p className="text-sm font-bold text-green-300">${priceStats.high.toFixed(6)}</p>
           </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={priceHistory}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis 
-                dataKey="time" 
-                tick={{ fontSize: 10, fill: '#9CA3AF' }}
-                interval="preserveStartEnd"
-              />
-              <YAxis 
-                tick={{ fontSize: 10, fill: '#9CA3AF' }}
-                domain={['dataMin - 0.0001', 'dataMax + 0.0001']}
-                tickFormatter={(value) => `$${value.toFixed(8)}`}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: '#1E293B', 
-                  border: '1px solid #6366F1',
-                  borderRadius: '8px',
-                  color: '#fff'
-                }}
-                formatter={(value: number) => [`$${value.toFixed(8)}`, 'Price']}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="price" 
-                stroke="#06B6D4" 
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 3, stroke: '#06B6D4', strokeWidth: 2 }}
-                connectNulls={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+          <div className="bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border border-indigo-500/20 rounded-lg p-3 text-center">
+            <p className="text-xs text-indigo-400 font-medium mb-1">Current</p>
+            <p className="text-sm font-bold text-indigo-300">${currentPrice.toFixed(6)}</p>
+          </div>
+          <div className="bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20 rounded-lg p-3 text-center">
+            <p className="text-xs text-red-400 font-medium mb-1">24h Low</p>
+            <p className="text-sm font-bold text-red-300">${priceStats.low.toFixed(6)}</p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-lg p-3 text-center">
+            <p className="text-xs text-purple-400 font-medium mb-1">Volume</p>
+            <p className="text-xs font-bold text-purple-300">${(priceStats.volume / 1000000).toFixed(1)}M</p>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-4 gap-3 text-center">
-        <div className="bg-slate-900/30 rounded p-2">
-          <p className="text-xs text-gray-400">24h High</p>
-          <p className="text-sm font-semibold text-green-400">${priceStats.high.toFixed(8)}</p>
+        <div className="mt-4 text-center">
+          <p className="text-xs text-slate-500">
+            Live updates every 500ms • Full precision pricing
+          </p>
         </div>
-        <div className="bg-slate-900/30 rounded p-2">
-          <p className="text-xs text-gray-400">Current</p>
-          <p className="text-sm font-semibold text-cyan-400">${currentPrice.toFixed(8)}</p>
-        </div>
-        <div className="bg-slate-900/30 rounded p-2">
-          <p className="text-xs text-gray-400">24h Low</p>
-          <p className="text-sm font-semibold text-red-400">${priceStats.low.toFixed(8)}</p>
-        </div>
-        <div className="bg-slate-900/30 rounded p-2">
-          <p className="text-xs text-gray-400">Volume</p>
-          <p className="text-xs font-semibold text-purple-400">${(priceStats.volume / 1000000).toFixed(1)}M</p>
-        </div>
-      </div>
-
-      <div className="mt-4 text-center">
-        <p className="text-xs text-gray-500">
-          ⚡ Ultra-fast XRP data • Updates every second • 8 decimal precision • Millisecond ready
-        </p>
       </div>
     </Card>
   );
