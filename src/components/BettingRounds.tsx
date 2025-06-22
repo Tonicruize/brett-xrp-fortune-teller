@@ -17,206 +17,185 @@ interface Round {
 
 interface BettingRoundsProps {
   rounds: Round[];
-  onPlaceBet: (roundId: string, direction: 'bull' | 'bear', amount: number) => void;
-  userBets: { [roundId: string]: { direction: 'bull' | 'bear', amount: number } };
+  onPlaceBet: (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => void;
+  userBets: { [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } };
+  currentPrice: number;
 }
 
-export const BettingRounds = ({ rounds, onPlaceBet, userBets }: BettingRoundsProps) => {
+export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice }: BettingRoundsProps) => {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getRoundStatus = (round: Round) => {
-    if (round.status === 'live') return 'LIVE';
-    if (round.status === 'next') return 'NEXT';
-    return 'ENDED';
+  const getPriceMovement = (startPrice: number, currentPrice: number) => {
+    if (startPrice === currentPrice) return 'same';
+    return currentPrice > startPrice ? 'up' : 'down';
   };
 
-  const getStatusColor = (status: string) => {
-    if (status === 'LIVE') return 'text-green-400 border-green-400 bg-green-400/10';
-    if (status === 'NEXT') return 'text-yellow-400 border-yellow-400 bg-yellow-400/10';
-    return 'text-slate-400 border-slate-600 bg-slate-600/10';
+  const getPriceChange = (startPrice: number, currentPrice: number) => {
+    return ((currentPrice - startPrice) / startPrice * 100).toFixed(3);
   };
-
-  // Group rounds by status for better layout
-  const liveRounds = rounds.filter(r => r.status === 'live');
-  const nextRounds = rounds.filter(r => r.status === 'next');
-  const completedRounds = rounds.filter(r => r.status === 'completed').slice(0, 3);
 
   const renderRound = (round: Round) => {
     const userBet = userBets[round.id];
-    const bullPercentage = round.totalPool > 0 ? (round.bullPool / round.totalPool) * 100 : 50;
-    const bearPercentage = round.totalPool > 0 ? (round.bearPool / round.totalPool) * 100 : 50;
-    const status = getRoundStatus(round);
+    const movement = round.startPrice ? getPriceMovement(round.startPrice, currentPrice) : 'same';
+    const priceChange = round.startPrice ? getPriceChange(round.startPrice, currentPrice) : '0.000';
 
     return (
-      <Card key={round.id} className="bg-slate-900 border border-slate-700 p-3 min-w-[280px]">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className={`px-2 py-1 border text-xs font-inter font-medium ${getStatusColor(status)}`}>
-              {status}
-            </div>
-            <span className="text-slate-400 font-inter text-xs">#{round.id}</span>
+      <Card key={round.id} className="bg-slate-900 border border-yellow-500/30 p-4 min-w-[300px] flex-shrink-0">
+        {/* Header with Clock and Round Number */}
+        <div className="flex items-center justify-center gap-2 mb-4 bg-slate-800 rounded-lg p-2">
+          <Clock className="w-4 h-4 text-yellow-400" />
+          <span className="font-orbitron font-bold text-white">ROUND #{round.id}</span>
+          <div className="ml-auto text-yellow-400 font-orbitron font-bold">
+            {formatTime(round.timeLeft)}
+          </div>
+        </div>
+
+        {/* Price Display */}
+        <div className="text-center mb-4 bg-slate-800 rounded-lg p-3">
+          <div className="text-xs text-slate-400 font-inter mb-1">LIVE PRICE</div>
+          <div className="text-2xl font-orbitron font-bold text-white mb-1">
+            ${currentPrice.toFixed(6)}
           </div>
           
-          {round.status !== 'completed' && (
-            <div className="flex items-center gap-1 text-white font-inter text-sm">
-              <Clock className="w-3 h-3" />
-              <span className="font-medium">{formatTime(round.timeLeft)}</span>
-            </div>
+          {round.startPrice && (
+            <>
+              <div className="text-xs text-slate-400 font-inter mb-1">START PRICE</div>
+              <div className="text-lg font-orbitron font-semibold text-slate-300">
+                ${round.startPrice.toFixed(6)}
+              </div>
+              
+              {/* Movement Indicator */}
+              <div className={`flex items-center justify-center gap-1 mt-2 px-2 py-1 rounded-full text-xs font-orbitron font-bold ${
+                movement === 'up' ? 'bg-green-500/20 text-green-400' : 
+                movement === 'down' ? 'bg-red-500/20 text-red-400' : 
+                'bg-slate-500/20 text-slate-400'
+              }`}>
+                {movement === 'up' && <TrendingUp className="w-3 h-3" />}
+                {movement === 'down' && <TrendingDown className="w-3 h-3" />}
+                <span>
+                  {movement === 'up' ? '+' : movement === 'down' ? '' : ''}{priceChange}%
+                </span>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Betting Pools */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-slate-800 border-l-2 border-green-500 p-2">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1">
-                <TrendingUp className="w-3 h-3 text-green-400" />
-                <span className="font-inter font-medium text-green-400 text-xs">BULL</span>
+        {/* Betting Buttons */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* UP Button */}
+          <div className="space-y-2">
+            <Button
+              onClick={() => onPlaceBet(round.id, 'bull', 10, 'xrp')}
+              disabled={round.status !== 'next' || !!userBet}
+              className="w-full h-12 bg-green-700 hover:bg-green-600 disabled:opacity-50 font-orbitron font-bold"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              UP
+            </Button>
+            <div className="text-center">
+              <div className="text-xs text-slate-400 font-inter">Pool</div>
+              <div className="text-sm font-orbitron font-bold text-green-400">
+                ${round.bullPool.toFixed(2)}
               </div>
-              <span className="text-green-400 font-inter font-medium text-xs">
-                {bullPercentage.toFixed(1)}%
-              </span>
-            </div>
-            <div className="text-white font-inter font-semibold text-sm">
-              ${round.bullPool.toFixed(2)}
-            </div>
-            <div className="w-full bg-slate-700 h-1 mt-1">
-              <div 
-                className="bg-green-500 h-full transition-all duration-300"
-                style={{ width: `${bullPercentage}%` }}
-              />
             </div>
           </div>
 
-          <div className="bg-slate-800 border-l-2 border-red-500 p-2">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1">
-                <TrendingDown className="w-3 h-3 text-red-400" />
-                <span className="font-inter font-medium text-red-400 text-xs">BEAR</span>
+          {/* DOWN Button */}
+          <div className="space-y-2">
+            <Button
+              onClick={() => onPlaceBet(round.id, 'bear', 10, 'xrp')}
+              disabled={round.status !== 'next' || !!userBet}
+              className="w-full h-12 bg-red-700 hover:bg-red-600 disabled:opacity-50 font-orbitron font-bold"
+            >
+              <TrendingDown className="w-4 h-4 mr-2" />
+              DOWN
+            </Button>
+            <div className="text-center">
+              <div className="text-xs text-slate-400 font-inter">Pool</div>
+              <div className="text-sm font-orbitron font-bold text-red-400">
+                ${round.bearPool.toFixed(2)}
               </div>
-              <span className="text-red-400 font-inter font-medium text-xs">
-                {bearPercentage.toFixed(1)}%
-              </span>
-            </div>
-            <div className="text-white font-inter font-semibold text-sm">
-              ${round.bearPool.toFixed(2)}
-            </div>
-            <div className="w-full bg-slate-700 h-1 mt-1">
-              <div 
-                className="bg-red-500 h-full transition-all duration-300"
-                style={{ width: `${bearPercentage}%` }}
-              />
             </div>
           </div>
         </div>
 
-        {/* Price Information for completed rounds */}
-        {round.status === 'completed' && (
-          <div className="bg-slate-800 p-2 mb-3">
-            <div className="grid grid-cols-3 gap-2 text-center font-inter text-xs">
-              <div>
-                <div className="text-slate-400 mb-1">START</div>
-                <div className="text-white font-medium">${round.startPrice?.toFixed(5)}</div>
+        {/* Token Selection for Next Rounds */}
+        {round.status === 'next' && !userBet && (
+          <div className="mb-4">
+            <div className="text-xs text-slate-400 font-inter mb-2 text-center">STAKE WITH</div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={() => onPlaceBet(round.id, 'bull', 10, 'xrp')}
+                variant="outline"
+                className="text-xs bg-slate-800 border-slate-600 text-white hover:bg-slate-700"
+              >
+                XRP
+              </Button>
+              <Button
+                onClick={() => onPlaceBet(round.id, 'bull', 10, 'brett')}
+                variant="outline"
+                className="text-xs bg-slate-800 border-slate-600 text-white hover:bg-slate-700"
+              >
+                BRETT
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* User Bet Display */}
+        {userBet && (
+          <div className={`p-3 rounded-lg border ${
+            userBet.direction === 'bull' 
+              ? 'border-green-500 bg-green-900/20' 
+              : 'border-red-500 bg-red-900/20'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {userBet.direction === 'bull' ? (
+                  <TrendingUp className="w-4 h-4 text-green-400" />
+                ) : (
+                  <TrendingDown className="w-4 h-4 text-red-400" />
+                )}
+                <span className={`font-orbitron font-bold text-xs ${
+                  userBet.direction === 'bull' ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  YOUR BET: {userBet.direction.toUpperCase()}
+                </span>
               </div>
-              <div>
-                <div className="text-slate-400 mb-1">END</div>
-                <div className="text-white font-medium">${round.endPrice?.toFixed(5)}</div>
-              </div>
-              <div>
-                <div className="text-slate-400 mb-1">RESULT</div>
-                <div className={`font-medium text-xs ${round.result === 'bull' ? 'text-green-400' : 'text-red-400'}`}>
-                  {round.result?.toUpperCase()}
+              <div className="text-right">
+                <div className="text-white font-orbitron font-bold text-sm">
+                  {userBet.amount} {userBet.token.toUpperCase()}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Betting Actions */}
-        {round.status === 'next' && !userBet && (
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              onClick={() => onPlaceBet(round.id, 'bull', 10)}
-              className="h-8 bg-green-700 hover:bg-green-600 font-inter font-medium text-xs"
-            >
-              <TrendingUp className="w-3 h-3 mr-1" />
-              BET BULL
-            </Button>
-            <Button
-              onClick={() => onPlaceBet(round.id, 'bear', 10)}
-              className="h-8 bg-red-700 hover:bg-red-600 font-inter font-medium text-xs"
-            >
-              <TrendingDown className="w-3 h-3 mr-1" />
-              BET BEAR
-            </Button>
-          </div>
-        )}
-
-        {/* User Bet Display */}
-        {userBet && (
-          <div className={`p-2 border ${
-            userBet.direction === 'bull' 
-              ? 'border-green-500 bg-green-900/20' 
-              : 'border-red-500 bg-red-900/20'
+        {/* Round Status */}
+        <div className="mt-3 text-center">
+          <span className={`px-3 py-1 rounded-full text-xs font-orbitron font-bold ${
+            round.status === 'live' ? 'bg-green-500/20 text-green-400' :
+            round.status === 'next' ? 'bg-yellow-500/20 text-yellow-400' :
+            'bg-slate-500/20 text-slate-400'
           }`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                {userBet.direction === 'bull' ? (
-                  <TrendingUp className="w-3 h-3 text-green-400" />
-                ) : (
-                  <TrendingDown className="w-3 h-3 text-red-400" />
-                )}
-                <span className={`font-inter font-medium text-xs ${
-                  userBet.direction === 'bull' ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  YOUR BET: {userBet.direction.toUpperCase()}
-                </span>
-              </div>
-              <span className="text-white font-inter font-medium text-xs">
-                ${userBet.amount.toFixed(2)}
-              </span>
-            </div>
-          </div>
-        )}
+            {round.status === 'live' ? 'LIVE' : 
+             round.status === 'next' ? 'NEXT' : 
+             'ENDED'}
+          </span>
+        </div>
       </Card>
     );
   };
 
   return (
     <div className="space-y-6">
-      {/* Live and Next Rounds - Side by Side */}
-      <div className="space-y-4">
-        {liveRounds.length > 0 && (
-          <div>
-            <h4 className="text-lg font-orbitron font-bold text-green-400 mb-3">LIVE ROUNDS</h4>
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {liveRounds.map(renderRound)}
-            </div>
-          </div>
-        )}
-
-        {nextRounds.length > 0 && (
-          <div>
-            <h4 className="text-lg font-orbitron font-bold text-yellow-400 mb-3">UPCOMING ROUNDS</h4>
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {nextRounds.map(renderRound)}
-            </div>
-          </div>
-        )}
-
-        {completedRounds.length > 0 && (
-          <div>
-            <h4 className="text-lg font-orbitron font-bold text-slate-400 mb-3">RECENT RESULTS</h4>
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {completedRounds.map(renderRound)}
-            </div>
-          </div>
-        )}
+      {/* All Rounds in a Horizontal Scroll */}
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {rounds.map(renderRound)}
       </div>
     </div>
   );

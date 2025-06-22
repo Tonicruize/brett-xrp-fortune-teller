@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { CandleChart } from './CandleChart';
 import { BettingRounds } from './BettingRounds';
 import { Card } from '@/components/ui/card';
-import { Trophy, Users, DollarSign } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Users, DollarSign, BarChart3, EyeOff } from 'lucide-react';
 
 interface Round {
   id: string;
@@ -23,6 +23,7 @@ interface GenieGameInterfaceProps {
 }
 
 export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfaceProps) => {
+  const [showChart, setShowChart] = useState(false);
   const [rounds, setRounds] = useState<Round[]>([
     {
       id: '001',
@@ -36,7 +37,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     {
       id: '002',
       status: 'next',
-      timeLeft: 135,
+      timeLeft: 105,
       bullPool: 850.20,
       bearPool: 1100.40,
       totalPool: 1950.60
@@ -44,40 +45,26 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     {
       id: '003',
       status: 'next',
-      timeLeft: 225,
+      timeLeft: 165,
       bullPool: 450.80,
       bearPool: 680.20,
       totalPool: 1131.00
     },
     {
       id: '004',
-      status: 'completed',
-      timeLeft: 0,
-      startPrice: 0.62380000,
-      endPrice: 0.62520000,
-      bullPool: 2100.80,
-      bearPool: 1200.40,
-      totalPool: 3301.20,
-      result: 'bull'
-    },
-    {
-      id: '005',
-      status: 'completed',
-      timeLeft: 0,
-      startPrice: 0.62520000,
-      endPrice: 0.62380000,
-      bullPool: 1800.60,
-      bearPool: 2400.90,
-      totalPool: 4201.50,
-      result: 'bear'
+      status: 'next',
+      timeLeft: 225,
+      bullPool: 350.60,
+      bearPool: 520.40,
+      totalPool: 871.00
     }
   ]);
 
-  const [userBets, setUserBets] = useState<{ [roundId: string]: { direction: 'bull' | 'bear', amount: number } }>({
-    '001': { direction: 'bull', amount: 25.00 }
+  const [userBets, setUserBets] = useState<{ [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } }>({
+    '001': { direction: 'bull', amount: 25.00, token: 'xrp' }
   });
 
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     totalPlayers: 1247,
     totalPool: 45670.80,
     winRate: 68.5
@@ -120,12 +107,12 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     return () => clearInterval(interval);
   }, [currentPrice]);
 
-  const handlePlaceBet = (roundId: string, direction: 'bull' | 'bear', amount: number) => {
+  const handlePlaceBet = (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => {
     if (!user) return;
 
     setUserBets(prev => ({
       ...prev,
-      [roundId]: { direction, amount }
+      [roundId]: { direction, amount, token }
     }));
 
     setRounds(prev => 
@@ -192,26 +179,40 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
         </Card>
       </div>
 
-      {/* Betting Rounds - Horizontal Layout */}
+      {/* Betting Rounds */}
       <div className="space-y-4">
-        <h3 className="text-xl font-orbitron font-bold text-white">BETTING ROUNDS</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-orbitron font-bold text-white">BETTING ROUNDS</h3>
+          <Button
+            onClick={() => setShowChart(!showChart)}
+            variant="outline"
+            className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700"
+          >
+            {showChart ? <EyeOff className="w-4 h-4 mr-2" /> : <BarChart3 className="w-4 h-4 mr-2" />}
+            {showChart ? 'HIDE CHART' : 'SHOW CHART'}
+          </Button>
+        </div>
+        
         <BettingRounds
           rounds={rounds}
           onPlaceBet={handlePlaceBet}
           userBets={userBets}
+          currentPrice={currentPrice}
         />
       </div>
 
-      {/* Live Chart */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-orbitron font-bold text-white">LIVE CHART</h3>
-        <CandleChart 
-          currentPrice={currentPrice}
-          gameActive={rounds.some(r => r.status === 'live')}
-          timeLeft={rounds.find(r => r.status === 'live')?.timeLeft || 0}
-          onRoundEnd={() => {}}
-        />
-      </div>
+      {/* Conditional Chart Display */}
+      {showChart && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-orbitron font-bold text-white">LIVE CHART</h3>
+          <CandleChart 
+            currentPrice={currentPrice}
+            gameActive={rounds.some(r => r.status === 'live')}
+            timeLeft={rounds.find(r => r.status === 'live')?.timeLeft || 0}
+            onRoundEnd={() => {}}
+          />
+        </div>
+      )}
     </div>
   );
 };
