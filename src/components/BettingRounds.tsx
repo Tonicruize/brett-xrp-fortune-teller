@@ -332,7 +332,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
