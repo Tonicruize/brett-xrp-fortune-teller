@@ -1,10 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { GameHeader } from '@/components/GameHeader';
 import { GameCard } from '@/components/GameCard';
 import { Footer } from '@/components/Footer';
-import { UserStats } from '@/components/UserStats';
-import { WalletInfo } from '@/components/WalletInfo';
+import { CompactUserStats } from '@/components/CompactUserStats';
 import { AuthModal } from '@/components/AuthModal';
 import { SocialSidebar } from '@/components/SocialSidebar';
 import { GenieGameInterface } from '@/components/GenieGameInterface';
@@ -124,8 +122,8 @@ const Index = () => {
             </div>
           </>
         ) : (
-          <div className="space-y-8">
-            <div className="flex items-center justify-between mb-8">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setActiveGame(null)}
@@ -135,14 +133,14 @@ const Index = () => {
                 </button>
                 <h2 className="text-2xl font-orbitron font-bold text-white">GENIE PREDICTION GAME</h2>
               </div>
-
-              {user && (
-                <div className="flex items-center gap-4">
-                  <UserStats score={score} balance={balance} user={user} />
-                  <WalletInfo user={user} balance={balance} />
-                </div>
-              )}
             </div>
+
+            {/* Compact User Stats - Only show when logged in */}
+            {user && (
+              <div className="mb-6">
+                <CompactUserStats score={score} balance={balance} user={user} />
+              </div>
+            )}
 
             <GenieGameInterface currentPrice={currentPrice} user={user} />
           </div>
