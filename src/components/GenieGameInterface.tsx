@@ -16,6 +16,7 @@ interface Round {
   bearPool: number;
   totalPool: number;
   result?: 'bull' | 'bear';
+  startTime: number;
 }
 
 interface GenieGameInterfaceProps {
@@ -25,35 +26,19 @@ interface GenieGameInterfaceProps {
 
 export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfaceProps) => {
   const [showChart, setShowChart] = useState(false);
-  const [rounds, setRounds] = useState<Round[]>([
-    {
-      id: '001',
-      status: 'live',
-      timeLeft: 60,
-      startPrice: 0.62450000,
-      bullPool: 1250.50,
-      bearPool: 890.30,
-      totalPool: 2140.80
-    },
-    {
-      id: '002',
-      status: 'next',
-      timeLeft: 120,
-      bullPool: 850.20,
-      bearPool: 1100.40,
-      totalPool: 1950.60
-    },
-    {
-      id: '003',
-      status: 'next',
-      timeLeft: 180,
-      bullPool: 450.80,
-      bearPool: 680.20,
-      totalPool: 1131.00
-    }
-  ]);
-
+  const [rounds, setRounds] = useState<Round[]>([]);
   const [userBets, setUserBets] = useState<{ [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } }>({});
+  const [gameStartTime] = useState(() => {
+    // Check if there's a saved game start time
+    const saved = localStorage.getItem('genie_game_start');
+    if (saved) {
+      return parseInt(saved);
+    }
+    // Start a new game cycle
+    const now = Date.now();
+    localStorage.setItem('genie_game_start', now.toString());
+    return now;
+  });
 
   const [stats] = useState({
     totalPlayers: 1247,
@@ -61,61 +46,116 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     winRate: 68.5
   });
 
-  // Fixed timer to count down normally (every 1000ms = 1 second)
+  // Initialize rounds based on game start time
+  useEffect(() => {
+    const initializeRounds = () => {
+      const now = Date.now();
+      const timeSinceStart = now - gameStartTime;
+      const roundDuration = 60000; // 1 minute in milliseconds
+      
+      // Calculate which round we should be on
+      const currentRoundIndex = Math.floor(timeSinceStart / roundDuration);
+      const timeInCurrentRound = timeSinceStart % roundDuration;
+      
+      const newRounds: Round[] = [];
+      
+      // Create 4 rounds: completed (if any), live, next, future
+      for (let i = Math.max(0, currentRoundIndex - 1); i < currentRoundIndex + 3; i++) {
+        const roundStartTime = gameStartTime + (i * roundDuration);
+        const roundEndTime = roundStartTime + roundDuration;
+        const timeLeft = Math.max(0, Math.ceil((roundEndTime - now) / 1000));
+        
+        let status: 'live' | 'next' | 'completed' = 'next';
+        if (i === currentRoundIndex) {
+          status = 'live';
+        } else if (i < currentRoundIndex) {
+          status = 'completed';
+        }
+        
+        newRounds.push({
+          id: String(i + 1).padStart(3, '0'),
+          status,
+          timeLeft,
+          startPrice: status === 'live' || status === 'completed' ? currentPrice : undefined,
+          bullPool: Math.random() * 1000 + 500,
+          bearPool: Math.random() * 1000 + 500,
+          totalPool: 0,
+          startTime: roundStartTime,
+          result: status === 'completed' ? (Math.random() > 0.5 ? 'bull' : 'bear') : undefined
+        });
+      }
+      
+      // Update total pools
+      newRounds.forEach(round => {
+        round.totalPool = round.bullPool + round.bearPool;
+      });
+      
+      setRounds(newRounds);
+    };
+
+    initializeRounds();
+  }, [gameStartTime, currentPrice]);
+
+  // Update timers every second
   useEffect(() => {
     const interval = setInterval(() => {
+      const now = Date.now();
+      const roundDuration = 60000;
+      const timeSinceStart = now - gameStartTime;
+      const currentRoundIndex = Math.floor(timeSinceStart / roundDuration);
+      
       setRounds(prevRounds => {
-        let newRounds = prevRounds.map(round => {
-          if (round.timeLeft > 0) {
-            const newTimeLeft = round.timeLeft - 1;
-            
-            if (newTimeLeft === 0) {
-              if (round.status === 'live') {
-                return {
-                  ...round,
-                  status: 'completed' as const,
-                  timeLeft: 0,
-                  endPrice: currentPrice,
-                  result: Math.random() > 0.5 ? 'bull' as const : 'bear' as const
-                };
-              } else if (round.status === 'next') {
-                return {
-                  ...round,
-                  status: 'live' as const,
-                  timeLeft: 60,
-                  startPrice: currentPrice
-                };
-              }
-            }
-            
-            return { ...round, timeLeft: newTimeLeft };
+        const newRounds = prevRounds.map(round => {
+          const roundIndex = parseInt(round.id) - 1;
+          const roundStartTime = gameStartTime + (roundIndex * roundDuration);
+          const roundEndTime = roundStartTime + roundDuration;
+          const timeLeft = Math.max(0, Math.ceil((roundEndTime - now) / 1000));
+          
+          let status: 'live' | 'next' | 'completed' = 'next';
+          if (roundIndex === currentRoundIndex) {
+            status = 'live';
+          } else if (roundIndex < currentRoundIndex) {
+            status = 'completed';
           }
-          return round;
+          
+          return {
+            ...round,
+            status,
+            timeLeft,
+            startPrice: (status === 'live' && !round.startPrice) ? currentPrice : round.startPrice
+          };
         });
-
-        // Remove completed rounds and add new ones
-        newRounds = newRounds.filter(round => round.status !== 'completed');
         
-        // Add new rounds if we have less than 3
-        while (newRounds.length < 3) {
-          const lastRound = newRounds[newRounds.length - 1];
-          const newId = String(parseInt(lastRound.id) + 1).padStart(3, '0');
-          newRounds.push({
-            id: newId,
+        // Remove old completed rounds and add new future rounds
+        const filteredRounds = newRounds.filter(round => 
+          round.status !== 'completed' || parseInt(round.id) >= currentRoundIndex
+        );
+        
+        // Add new rounds if needed
+        while (filteredRounds.length < 3) {
+          const lastRound = filteredRounds[filteredRounds.length - 1];
+          const newRoundIndex = lastRound ? parseInt(lastRound.id) : currentRoundIndex + 2;
+          const newRoundStartTime = gameStartTime + (newRoundIndex * roundDuration);
+          const newRoundEndTime = newRoundStartTime + roundDuration;
+          const newTimeLeft = Math.max(0, Math.ceil((newRoundEndTime - now) / 1000));
+          
+          filteredRounds.push({
+            id: String(newRoundIndex + 1).padStart(3, '0'),
             status: 'next',
-            timeLeft: (newRounds.length + 1) * 60,
-            bullPool: 0,
-            bearPool: 0,
-            totalPool: 0
+            timeLeft: newTimeLeft,
+            bullPool: Math.random() * 500 + 200,
+            bearPool: Math.random() * 500 + 200,
+            totalPool: 0,
+            startTime: newRoundStartTime
           });
         }
-
-        return newRounds;
+        
+        return filteredRounds;
       });
-    }, 1000); // Fixed to exactly 1 second
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [currentPrice]);
+  }, [gameStartTime, currentPrice]);
 
   const handlePlaceBet = (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => {
     if (!user) return;

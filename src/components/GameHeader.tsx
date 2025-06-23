@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
 
@@ -8,6 +9,28 @@ interface GameHeaderProps {
 }
 
 export const GameHeader = ({ user, onShowAuth }: GameHeaderProps) => {
+  const [brettPrice, setBrettPrice] = useState(0.0001234);
+  const [xrpPrice, setXrpPrice] = useState(0.62567890);
+
+  // Simulate price updates for Brett and XRP
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBrettPrice(prev => {
+        const volatility = 0.00000002;
+        const change = (Math.random() - 0.5) * volatility;
+        return Math.max(0, prev + change);
+      });
+      
+      setXrpPrice(prev => {
+        const volatility = 0.00002;
+        const change = (Math.random() - 0.5) * volatility;
+        return Math.max(0, prev + change);
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <header className="bg-slate-950 border-b border-slate-800">
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -24,6 +47,29 @@ export const GameHeader = ({ user, onShowAuth }: GameHeaderProps) => {
         </div>
 
         <div className="flex items-center gap-6">
+          {/* Market Indicators */}
+          <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="text-xs">
+                <div className="text-slate-400 font-inter">XRP</div>
+                <div className="text-green-400 font-orbitron font-bold">
+                  ${xrpPrice.toFixed(6)}
+                </div>
+              </div>
+            </div>
+            <div className="w-px h-8 bg-slate-700"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+              <div className="text-xs">
+                <div className="text-slate-400 font-inter">BRETT</div>
+                <div className="text-purple-400 font-orbitron font-bold">
+                  ${brettPrice.toFixed(8)}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {user ? (
             <div className="flex items-center gap-4">
               <div className="bg-slate-800 border border-slate-700 px-4 py-2 transform -skew-x-12">

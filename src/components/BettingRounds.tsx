@@ -95,10 +95,11 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     const movement = round.startPrice ? getPriceMovement(round.startPrice, currentPrice) : 'same';
     const priceChange = round.startPrice ? getPriceChange(round.startPrice, currentPrice) : '0.000';
     const isBetting = bettingState.roundId === round.id;
-    const canBet = user && round.status === 'live' && !userBet;
+    // Only allow betting on 'next' rounds, not live ones
+    const canBet = user && round.status === 'next' && !userBet;
 
     return (
-      <Card key={round.id} className={`bg-slate-900 border-2 min-w-[320px] flex-shrink-0 transition-all duration-300 ${
+      <Card key={round.id} className={`bg-slate-900 border-2 min-w-[300px] flex-shrink-0 transition-all duration-300 ${
         isBetting ? 'border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-slate-700'
       }`}>
         <div className="p-4">
@@ -221,44 +222,58 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
             </div>
           ) : (
             <>
-              {/* Betting Buttons */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* UP Button */}
-                <div className="space-y-2">
-                  <Button
-                    onClick={() => handleDirectionSelect(round.id, 'bull')}
-                    disabled={!canBet}
-                    className="w-full h-12 bg-green-700 hover:bg-green-600 disabled:opacity-50 font-orbitron font-bold"
-                  >
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    UP
-                  </Button>
-                  <div className="text-center">
-                    <div className="text-xs text-slate-400 font-inter">Pool</div>
-                    <div className="text-sm font-orbitron font-bold text-green-400">
-                      ${round.bullPool.toFixed(2)}
+              {/* Betting Buttons - Only show for next rounds */}
+              {round.status === 'next' && (
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {/* UP Button */}
+                  <div className="space-y-2">
+                    <Button
+                      onClick={() => handleDirectionSelect(round.id, 'bull')}
+                      disabled={!canBet}
+                      className="w-full h-12 bg-green-700 hover:bg-green-600 disabled:opacity-50 font-orbitron font-bold"
+                    >
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      UP
+                    </Button>
+                    <div className="text-center">
+                      <div className="text-xs text-slate-400 font-inter">Pool</div>
+                      <div className="text-sm font-orbitron font-bold text-green-400">
+                        ${round.bullPool.toFixed(2)}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* DOWN Button */}
-                <div className="space-y-2">
-                  <Button
-                    onClick={() => handleDirectionSelect(round.id, 'bear')}
-                    disabled={!canBet}
-                    className="w-full h-12 bg-red-700 hover:bg-red-600 disabled:opacity-50 font-orbitron font-bold"
-                  >
-                    <TrendingDown className="w-4 h-4 mr-2" />
-                    DOWN
-                  </Button>
-                  <div className="text-center">
-                    <div className="text-xs text-slate-400 font-inter">Pool</div>
-                    <div className="text-sm font-orbitron font-bold text-red-400">
-                      ${round.bearPool.toFixed(2)}
+                  {/* DOWN Button */}
+                  <div className="space-y-2">
+                    <Button
+                      onClick={() => handleDirectionSelect(round.id, 'bear')}
+                      disabled={!canBet}
+                      className="w-full h-12 bg-red-700 hover:bg-red-600 disabled:opacity-50 font-orbitron font-bold"
+                    >
+                      <TrendingDown className="w-4 h-4 mr-2" />
+                      DOWN
+                    </Button>
+                    <div className="text-center">
+                      <div className="text-xs text-slate-400 font-inter">Pool</div>
+                      <div className="text-sm font-orbitron font-bold text-red-400">
+                        ${round.bearPool.toFixed(2)}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Live Round Display - No betting allowed */}
+              {round.status === 'live' && (
+                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-center">
+                  <div className="text-yellow-400 font-orbitron font-bold text-sm">
+                    ROUND IN PROGRESS
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1">
+                    Betting closed - round is live
+                  </div>
+                </div>
+              )}
 
               {/* User Bet Display - Only show if there's a bet */}
               {userBet && (
@@ -310,10 +325,22 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
 
   return (
     <div className="space-y-6">
-      {/* Modern Grid Layout - No Horizontal Scroll */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {rounds.map(renderRound)}
+      {/* Horizontal Scroll Container - Hidden scrollbar */}
+      <div className="overflow-x-auto scrollbar-hide">
+        <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
+          {rounds.map(renderRound)}
+        </div>
       </div>
+      
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 };
