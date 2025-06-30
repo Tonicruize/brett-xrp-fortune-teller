@@ -59,10 +59,10 @@ export const useUserData = () => {
         } else {
           setStats({
             score: statsData.score || 0,
-            balance: parseFloat(statsData.balance) || 100,
+            balance: typeof statsData.balance === 'string' ? parseFloat(statsData.balance) : (statsData.balance || 100),
             games_played: statsData.games_played || 0,
             games_won: statsData.games_won || 0,
-            total_winnings: parseFloat(statsData.total_winnings) || 0
+            total_winnings: typeof statsData.total_winnings === 'string' ? parseFloat(statsData.total_winnings) : (statsData.total_winnings || 0)
           });
         }
       } catch (error) {
