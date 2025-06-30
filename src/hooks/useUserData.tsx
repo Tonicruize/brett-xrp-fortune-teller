@@ -86,10 +86,10 @@ export const useUserData = () => {
         .from('user_stats')
         .update({
           score: updatedStats.score,
-          balance: updatedStats.balance.toString(),
+          balance: updatedStats.balance,
           games_played: updatedStats.games_played,
           games_won: updatedStats.games_won,
-          total_winnings: updatedStats.total_winnings.toString()
+          total_winnings: updatedStats.total_winnings
         })
         .eq('user_id', user.id);
     } catch (error) {
