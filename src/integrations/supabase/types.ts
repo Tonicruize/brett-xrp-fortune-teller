@@ -9,7 +9,127 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          updated_at: string
+          username: string | null
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          updated_at?: string
+          username?: string | null
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          updated_at?: string
+          username?: string | null
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      user_bets: {
+        Row: {
+          amount: number
+          created_at: string
+          direction: string
+          end_price: number | null
+          id: string
+          payout: number | null
+          result: string | null
+          round_id: string
+          start_price: number | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          direction: string
+          end_price?: number | null
+          id?: string
+          payout?: number | null
+          result?: string | null
+          round_id: string
+          start_price?: number | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          direction?: string
+          end_price?: number | null
+          id?: string
+          payout?: number | null
+          result?: string | null
+          round_id?: string
+          start_price?: number | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_bets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_stats: {
+        Row: {
+          balance: number | null
+          created_at: string
+          games_played: number | null
+          games_won: number | null
+          id: string
+          score: number | null
+          total_winnings: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string
+          games_played?: number | null
+          games_won?: number | null
+          id?: string
+          score?: number | null
+          total_winnings?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string
+          games_played?: number | null
+          games_won?: number | null
+          id?: string
+          score?: number | null
+          total_winnings?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_stats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

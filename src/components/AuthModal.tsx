@@ -7,14 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Mail, Lock, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAuth: (user: any) => void;
 }
 
-export const AuthModal = ({ isOpen, onClose, onAuth }: AuthModalProps) => {
+export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -23,6 +23,7 @@ export const AuthModal = ({ isOpen, onClose, onAuth }: AuthModalProps) => {
     confirmPassword: ''
   });
   const { toast } = useToast();
+  const { signIn, signUp } = useAuth();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -32,21 +33,31 @@ export const AuthModal = ({ isOpen, onClose, onAuth }: AuthModalProps) => {
     e.preventDefault();
     setIsLoading(true);
     
-    setTimeout(() => {
-      const user = {
-        id: '1',
-        username: formData.username || 'Player1',
-        email: formData.email,
-        walletAddress: 'rN7n7oTpkQd9JUoRhkGELdaraJBoMSTn9x2QvZs'
-      };
+    try {
+      const { error } = await signIn(formData.email, formData.password);
       
-      onAuth(user);
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welcome back! 🎉",
+          description: "You're now logged in and ready to play!",
+        });
+        onClose();
+      }
+    } catch (error) {
       toast({
-        title: "Welcome back! 🎉",
-        description: "You're now logged in and ready to play!",
+        title: "Login Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -61,23 +72,42 @@ export const AuthModal = ({ isOpen, onClose, onAuth }: AuthModalProps) => {
       return;
     }
 
+    if (!formData.email || !formData.password || !formData.username) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
-    setTimeout(() => {
-      const user = {
-        id: Date.now().toString(),
-        username: formData.username,
-        email: formData.email,
-        walletAddress: 'rN7n7oTpkQd9JUoRhkGELdaraJBoMSTn9x2QvZs'
-      };
+    try {
+      const { error } = await signUp(formData.email, formData.password, formData.username);
       
-      onAuth(user);
+      if (error) {
+        toast({
+          title: "Signup Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Account Created! 🎉",
+          description: "Please check your email to confirm your account.",
+        });
+        onClose();
+      }
+    } catch (error) {
       toast({
-        title: "Account Created! 🎉",
-        description: "Your XRP wallet has been generated and you're ready to play!",
+        title: "Signup Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -111,15 +141,15 @@ export const AuthModal = ({ isOpen, onClose, onAuth }: AuthModalProps) => {
           <TabsContent value="login" className="space-y-4 mt-6">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-username" className="text-slate-300 font-inter text-sm">Username</Label>
+                <Label htmlFor="login-email" className="text-slate-300 font-inter text-sm">Email</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <Input
-                    id="login-username"
-                    type="text"
-                    placeholder="Enter your username"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    id="login-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                     className="pl-10 bg-slate-800 border-slate-600 text-white font-inter focus:border-yellow-500"
                     required
                   />

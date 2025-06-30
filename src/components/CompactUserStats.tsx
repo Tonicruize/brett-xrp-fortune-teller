@@ -65,7 +65,7 @@ export const CompactUserStats = ({ score, balance, user }: CompactUserStatsProps
               <Coins className="text-yellow-400 w-3 h-3" />
               <span className="text-xs text-gray-300">$BRETT</span>
             </div>
-            <span className="text-yellow-400 font-bold text-sm">{balance}</span>
+            <span className="text-yellow-400 font-bold text-sm">{balance.toFixed(2)}</span>
           </div>
         </div>
 

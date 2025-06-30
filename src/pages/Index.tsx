@@ -6,13 +6,14 @@ import { CompactUserStats } from '@/components/CompactUserStats';
 import { AuthModal } from '@/components/AuthModal';
 import { SocialSidebar } from '@/components/SocialSidebar';
 import { GenieGameInterface } from '@/components/GenieGameInterface';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserData } from '@/hooks/useUserData';
 
 const Index = () => {
-  const [user, setUser] = useState(null);
+  const { user, loading } = useAuth();
+  const { profile, stats } = useUserData();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentPrice, setCurrentPrice] = useState(0.62567890);
-  const [score, setScore] = useState(0);
-  const [balance, setBalance] = useState(100);
   const [activeGame, setActiveGame] = useState(null);
 
   // Simulate XRP/USDT price changes
@@ -28,20 +29,23 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleAuth = (userData) => {
-    setUser(userData);
-    setShowAuthModal(false);
-  };
-
   const handlePlayGame = (gameName) => {
     if (gameName === 'genie') {
       setActiveGame('genie');
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-white text-xl font-orbitron">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 font-orbitron">
-      <GameHeader user={user} onShowAuth={() => setShowAuthModal(true)} />
+      <GameHeader user={user} profile={profile} onShowAuth={() => setShowAuthModal(true)} />
       <SocialSidebar />
       
       <div className="container mx-auto px-6 py-8">
@@ -136,9 +140,13 @@ const Index = () => {
             </div>
 
             {/* Compact User Stats - Only show when logged in */}
-            {user && (
+            {user && stats && (
               <div className="mb-6">
-                <CompactUserStats score={score} balance={balance} user={user} />
+                <CompactUserStats 
+                  score={stats.score} 
+                  balance={stats.balance} 
+                  user={user} 
+                />
               </div>
             )}
 
@@ -152,7 +160,6 @@ const Index = () => {
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)}
-        onAuth={handleAuth}
       />
     </div>
   );

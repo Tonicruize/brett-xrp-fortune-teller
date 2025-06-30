@@ -2,15 +2,18 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GameHeaderProps {
   user: any;
+  profile: any;
   onShowAuth: () => void;
 }
 
-export const GameHeader = ({ user, onShowAuth }: GameHeaderProps) => {
+export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
   const [brettPrice, setBrettPrice] = useState(0.0001234);
   const [xrpPrice, setXrpPrice] = useState(0.62567890);
+  const { signOut } = useAuth();
 
   // Simulate price updates for Brett and XRP
   useEffect(() => {
@@ -30,6 +33,10 @@ export const GameHeader = ({ user, onShowAuth }: GameHeaderProps) => {
 
     return () => clearInterval(interval);
   }, []);
+
+  const handleLogout = async () => {
+    await signOut();
+  };
 
   return (
     <header className="bg-slate-950 border-b border-slate-800">
@@ -74,11 +81,14 @@ export const GameHeader = ({ user, onShowAuth }: GameHeaderProps) => {
             <div className="flex items-center gap-4">
               <div className="bg-slate-800 border border-slate-700 px-4 py-2 transform -skew-x-12">
                 <div className="transform skew-x-12">
-                  <span className="text-white font-orbitron font-semibold">{user.username}</span>
-                  <div className="text-yellow-500 text-sm font-orbitron">Balance: $1,250</div>
+                  <span className="text-white font-orbitron font-semibold">
+                    {profile?.username || user.email?.split('@')[0] || 'Player'}
+                  </span>
+                  <div className="text-yellow-500 text-sm font-orbitron">Online</div>
                 </div>
               </div>
               <Button 
+                onClick={handleLogout}
                 variant="outline" 
                 className="border-slate-600 text-slate-300 hover:bg-slate-800 font-orbitron transform -skew-x-12"
               >
