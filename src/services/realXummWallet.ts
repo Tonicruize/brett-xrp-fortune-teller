@@ -13,6 +13,16 @@ interface XummConfig {
   apiSecret: string;
 }
 
+// Add proper type definitions for XUMM API responses
+interface XummPayloadResponse {
+  signed: boolean;
+  response?: {
+    account?: string;
+    publickey?: string;
+  };
+  txid?: string;
+}
+
 class RealXummWalletService {
   private xumm: Xumm | null = null;
   private wallet: XummWallet | null = null;
@@ -50,7 +60,7 @@ class RealXummWalletService {
       }, (event) => {
         console.log('XUMM Event:', event);
         
-        if (event.data.signed === true) {
+        if (event.data && typeof event.data === 'object' && 'signed' in event.data && event.data.signed === true) {
           console.log('User signed the request');
         }
       });
@@ -59,9 +69,9 @@ class RealXummWalletService {
       console.log('XUMM QR Code:', request.created.refs.qr_png);
 
       // Wait for the user to sign
-      const result = await request.resolved;
+      const result = await request.resolved as XummPayloadResponse;
       
-      if (result.signed && result.response.account) {
+      if (result.signed && result.response?.account) {
         // Fetch account balance
         const balance = await this.fetchAccountBalance(result.response.account);
         
@@ -131,7 +141,7 @@ class RealXummWalletService {
         }
       });
 
-      const result = await request.resolved;
+      const result = await request.resolved as XummPayloadResponse;
       
       if (result.signed && result.txid) {
         return result.txid;
