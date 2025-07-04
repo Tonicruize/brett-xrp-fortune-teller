@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { GameHeader } from '@/components/GameHeader';
 import { GameCard } from '@/components/GameCard';
@@ -8,6 +9,7 @@ import { SocialSidebar } from '@/components/SocialSidebar';
 import { GenieGameInterface } from '@/components/GenieGameInterface';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
+import { realXrpOracle } from '@/services/realXrpOracle';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -16,17 +18,17 @@ const Index = () => {
   const [currentPrice, setCurrentPrice] = useState(0.62567890);
   const [activeGame, setActiveGame] = useState(null);
 
-  // Simulate XRP/USDT price changes
+  // Use real XRP price from oracle
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentPrice(prev =>  {
-        const volatility = 0.00002;
-        const trend = Math.sin(Date.now() / 10000) * 0.00001;
-        const change = (Math.random() - 0.5) * volatility + trend;
-        return Math.max(0, prev + change);
-      });
-    }, 1000);
-    return () => clearInterval(interval);
+    const handlePriceUpdate = (data: any) => {
+      setCurrentPrice(data.price);
+    };
+
+    realXrpOracle.startPriceUpdates(handlePriceUpdate);
+
+    return () => {
+      realXrpOracle.stopPriceUpdates();
+    };
   }, []);
 
   const handlePlayGame = (gameName) => {

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { realXrpOracle } from '@/services/realXrpOracle';
 
 interface GameHeaderProps {
   user: any;
@@ -15,23 +16,28 @@ export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
   const [xrpPrice, setXrpPrice] = useState(0.62567890);
   const { signOut } = useAuth();
 
-  // Simulate price updates for Brett and XRP
+  // Use real XRP prices from oracle and simulate Brett price
   useEffect(() => {
-    const interval = setInterval(() => {
+    // Start real XRP price updates
+    const handleXrpPriceUpdate = (data: any) => {
+      setXrpPrice(data.price);
+    };
+
+    realXrpOracle.startPriceUpdates(handleXrpPriceUpdate);
+
+    // Simulate Brett price updates
+    const brettInterval = setInterval(() => {
       setBrettPrice(prev => {
         const volatility = 0.00000002;
         const change = (Math.random() - 0.5) * volatility;
         return Math.max(0, prev + change);
       });
-      
-      setXrpPrice(prev => {
-        const volatility = 0.00002;
-        const change = (Math.random() - 0.5) * volatility;
-        return Math.max(0, prev + change);
-      });
     }, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      realXrpOracle.stopPriceUpdates();
+      clearInterval(brettInterval);
+    };
   }, []);
 
   const handleLogout = async () => {

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { CandleChart } from './CandleChart';
 import { BettingRounds } from './BettingRounds';
+import { LivePriceTracker } from './LivePriceTracker';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, DollarSign, BarChart3, EyeOff } from 'lucide-react';
@@ -28,6 +29,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
   const [showChart, setShowChart] = useState(false);
   const [rounds, setRounds] = useState<Round[]>([]);
   const [userBets, setUserBets] = useState<{ [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } }>({});
+  const [realCurrentPrice, setRealCurrentPrice] = useState(currentPrice);
   
   // Get persistent game start time using epoch-based calculation
   const getGameStartTime = () => {
@@ -45,11 +47,16 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     winRate: 68.5
   });
 
+  // Handle real price updates from LivePriceTracker
+  const handlePriceUpdate = (price: number) => {
+    setRealCurrentPrice(price);
+  };
+
   // Initialize and update rounds
   useEffect(() => {
     const updateRounds = () => {
       const now = Date.now();
-      const roundDuration = 60000; // 1 minute
+      const roundDuration = 60000; // 1 minute  
       const gameStartTime = getGameStartTime();
       const timeSinceStart = now - gameStartTime;
       const currentRoundIndex = Math.floor(timeSinceStart / roundDuration);
@@ -77,9 +84,9 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
           startTime: roundStartTime
         };
 
-        // Set startPrice for live rounds
+        // Set startPrice for live rounds using real price
         if (status === 'live') {
-          round.startPrice = currentPrice;
+          round.startPrice = realCurrentPrice;
         }
         
         round.totalPool = round.bullPool + round.bearPool;
@@ -95,7 +102,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     // Update every second
     const interval = setInterval(updateRounds, 1000);
     return () => clearInterval(interval);
-  }, [currentPrice]);
+  }, [realCurrentPrice]);
 
   const handlePlaceBet = (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => {
     if (!user) return;
@@ -123,8 +130,8 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
   };
 
   const liveRound = rounds.find(r => r.status === 'live');
-  const priceMovement = liveRound?.startPrice && liveRound.startPrice !== currentPrice 
-    ? (currentPrice > liveRound.startPrice ? 'up' : 'down') 
+  const priceMovement = liveRound?.startPrice && liveRound.startPrice !== realCurrentPrice 
+    ? (realCurrentPrice > liveRound.startPrice ? 'up' : 'down') 
     : null;
 
   return (
@@ -134,6 +141,9 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
                      'transparent',
       transition: 'background-color 0.5s ease'
     }}>
+      {/* Live Price Tracker */}
+      <LivePriceTracker onPriceUpdate={handlePriceUpdate} />
+
       {/* Trading Pair Header */}
       <div className="text-center">
         <h2 className="text-3xl font-orbitron font-bold text-white mb-2">XRP/USDT</h2>
@@ -197,7 +207,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
           rounds={rounds}
           onPlaceBet={handlePlaceBet}
           userBets={userBets}
-          currentPrice={currentPrice}
+          currentPrice={realCurrentPrice}
           user={user}
         />
       </div>
@@ -207,7 +217,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
         <div className="space-y-4">
           <h3 className="text-xl font-orbitron font-bold text-white">LIVE CHART</h3>
           <CandleChart 
-            currentPrice={currentPrice}
+            currentPrice={realCurrentPrice}
             gameActive={rounds.some(r => r.status === 'live')}
             timeLeft={rounds.find(r => r.status === 'live')?.timeLeft || 0}
             onRoundEnd={() => {}}
