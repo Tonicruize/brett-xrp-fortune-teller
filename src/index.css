@@ -74,7 +74,7 @@
   }
   
   /* Apply Outfit font to all elements by default */
-  h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, label, a {
+  h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, label, a, li, ul, ol, table, th, td, select, option {
     font-family: 'Outfit', system-ui, sans-serif !important;
   }
 }

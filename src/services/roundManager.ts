@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface RoundData {
@@ -143,7 +144,7 @@ class RoundManager {
         end_time: endTime,
         start_price: startPrice,
         end_price: endPrice,
-        total_pool: poolBalance * 0.8 + Math.random() * poolBalance * 0.4,
+        total_pool: poolBalance,
         result: endPrice > startPrice ? 'bull' : 'bear',
         percentage_change: percentageChange
       });
