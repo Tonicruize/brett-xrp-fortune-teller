@@ -13,6 +13,8 @@ class RealXRPOracle {
   private intervalId: NodeJS.Timeout | null = null;
   private lastPrice: number = 0;
   private isRunning: boolean = false;
+  private poolWalletAddress: string = 'rPfino2rPWQJXvacvS2bct4bdXfAcWuYcw';
+  private poolBalance: number = 0;
 
   async fetchFromCoinGecko(): Promise<XRPPriceData | null> {
     try {
@@ -67,6 +69,36 @@ class RealXRPOracle {
     }
   }
 
+  async fetchWalletBalance(): Promise<number> {
+    try {
+      const response = await fetch('https://s1.ripple.com:51234/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          method: 'account_info',
+          params: [{
+            account: this.poolWalletAddress,
+            ledger_index: 'validated'
+          }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.result && data.result.account_data) {
+        // Convert drops to XRP (1 XRP = 1,000,000 drops)
+        return parseFloat(data.result.account_data.Balance) / 1000000;
+      }
+      
+      return 0;
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+      return 0;
+    }
+  }
+
   async getCurrentPrice(): Promise<XRPPriceData> {
     // Try Binance first (more comprehensive data), fallback to CoinGecko
     let priceData = await this.fetchFromBinance();
@@ -74,6 +106,9 @@ class RealXRPOracle {
     if (!priceData) {
       priceData = await this.fetchFromCoinGecko();
     }
+
+    // Fetch wallet balance
+    this.poolBalance = await this.fetchWalletBalance();
 
     // If both fail, return mock data with last known price
     if (!priceData) {
@@ -91,6 +126,10 @@ class RealXRPOracle {
     return priceData;
   }
 
+  getPoolBalance(): number {
+    return this.poolBalance;
+  }
+
   startPriceUpdates(callback: (data: XRPPriceData) => void): void {
     if (this.isRunning) return;
 
@@ -100,11 +139,11 @@ class RealXRPOracle {
     // Initial fetch
     this.getCurrentPrice().then(callback);
 
-    // Update every 2 seconds for real-time feel
+    // Update every 1 second for real-time feel
     this.intervalId = setInterval(async () => {
       const data = await this.getCurrentPrice();
       this.listeners.forEach(listener => listener(data));
-    }, 2000);
+    }, 1000);
   }
 
   stopPriceUpdates(): void {

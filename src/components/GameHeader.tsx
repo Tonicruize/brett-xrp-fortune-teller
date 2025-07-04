@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { realXrpOracle } from '@/services/realXrpOracle';
 
@@ -9,11 +9,13 @@ interface GameHeaderProps {
   user: any;
   profile: any;
   onShowAuth: () => void;
+  onShowWalletConnect?: () => void;
 }
 
-export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
+export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: GameHeaderProps) => {
   const [brettPrice, setBrettPrice] = useState(0.0001234);
   const [xrpPrice, setXrpPrice] = useState(0.62567890);
+  const [poolBalance, setPoolBalance] = useState(0);
   const { signOut } = useAuth();
 
   // Use real XRP prices from oracle and simulate Brett price
@@ -21,6 +23,7 @@ export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
     // Start real XRP price updates
     const handleXrpPriceUpdate = (data: any) => {
       setXrpPrice(data.price);
+      setPoolBalance(realXrpOracle.getPoolBalance());
     };
 
     realXrpOracle.startPriceUpdates(handleXrpPriceUpdate);
@@ -55,7 +58,7 @@ export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
           />
           <div>
             <h1 className="text-2xl font-orbitron font-black text-white">BRETT CASINO</h1>
-            <p className="text-slate-400 text-sm font-orbitron">Professional Gaming Platform</p>
+            <p className="text-slate-400 text-sm font-outfit">Professional Gaming Platform</p>
           </div>
         </div>
 
@@ -65,7 +68,7 @@ export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <div className="text-xs">
-                <div className="text-slate-400 font-inter">XRP</div>
+                <div className="text-slate-400 font-outfit">XRP</div>
                 <div className="text-green-400 font-orbitron font-bold">
                   ${xrpPrice.toFixed(6)}
                 </div>
@@ -75,9 +78,19 @@ export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
               <div className="text-xs">
-                <div className="text-slate-400 font-inter">BRETT</div>
+                <div className="text-slate-400 font-outfit">BRETT</div>
                 <div className="text-purple-400 font-orbitron font-bold">
                   ${brettPrice.toFixed(8)}
+                </div>
+              </div>
+            </div>
+            <div className="w-px h-8 bg-slate-700"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+              <div className="text-xs">
+                <div className="text-slate-400 font-outfit">POOL</div>
+                <div className="text-yellow-400 font-orbitron font-bold">
+                  {poolBalance.toFixed(2)} XRP
                 </div>
               </div>
             </div>
@@ -90,13 +103,27 @@ export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
                   <span className="text-white font-orbitron font-semibold">
                     {profile?.username || user.email?.split('@')[0] || 'Player'}
                   </span>
-                  <div className="text-yellow-500 text-sm font-orbitron">Online</div>
+                  <div className="text-yellow-500 text-sm font-outfit">Online</div>
                 </div>
               </div>
+              
+              {onShowWalletConnect && (
+                <Button 
+                  onClick={onShowWalletConnect}
+                  variant="outline" 
+                  className="border-slate-600 text-slate-300 hover:bg-slate-800 font-outfit transform -skew-x-12"
+                >
+                  <div className="transform skew-x-12 flex items-center">
+                    <Wallet className="w-4 h-4 mr-2" />
+                    CONNECT WALLET
+                  </div>
+                </Button>
+              )}
+              
               <Button 
                 onClick={handleLogout}
                 variant="outline" 
-                className="border-slate-600 text-slate-300 hover:bg-slate-800 font-orbitron transform -skew-x-12"
+                className="border-slate-600 text-slate-300 hover:bg-slate-800 font-outfit transform -skew-x-12"
               >
                 <div className="transform skew-x-12 flex items-center">
                   <LogOut className="w-4 h-4 mr-2" />
@@ -107,7 +134,7 @@ export const GameHeader = ({ user, profile, onShowAuth }: GameHeaderProps) => {
           ) : (
             <Button 
               onClick={onShowAuth}
-              className="bg-yellow-600 hover:bg-yellow-700 text-black font-orbitron font-bold px-6 transform -skew-x-12"
+              className="bg-yellow-600 hover:bg-yellow-700 text-black font-outfit font-bold px-6 transform -skew-x-12"
             >
               <div className="transform skew-x-12 flex items-center">
                 <User className="w-4 h-4 mr-2" />
