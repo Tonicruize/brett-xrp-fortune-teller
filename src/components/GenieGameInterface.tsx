@@ -8,19 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Trophy, Users, DollarSign, BarChart3, EyeOff } from 'lucide-react';
 import { realXrpOracle } from '@/services/realXrpOracle';
 
-interface Round {
-  id: string;
-  status: 'live' | 'next' | 'completed';
-  timeLeft: number;
-  startPrice?: number;
-  endPrice?: number;
-  bullPool: number;
-  bearPool: number;
-  totalPool: number;
-  result?: 'bull' | 'bear';
-  startTime: number;
-}
-
 interface GenieGameInterfaceProps {
   currentPrice: number;
   user: any;
@@ -28,21 +15,10 @@ interface GenieGameInterfaceProps {
 
 export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfaceProps) => {
   const [showChart, setShowChart] = useState(false);
-  const [rounds, setRounds] = useState<Round[]>([]);
   const [userBets, setUserBets] = useState<{ [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } }>({});
   const [realCurrentPrice, setRealCurrentPrice] = useState(currentPrice);
   const [poolBalance, setPoolBalance] = useState(0);
   
-  // Get persistent game start time using epoch-based calculation
-  const getGameStartTime = () => {
-    const epochStart = new Date('2025-01-01T00:00:00Z').getTime();
-    const roundDuration = 60000; // 1 minute
-    const now = Date.now();
-    const timeSinceEpoch = now - epochStart;
-    const currentRoundIndex = Math.floor(timeSinceEpoch / roundDuration);
-    return epochStart + (currentRoundIndex * roundDuration);
-  };
-
   const [stats] = useState({
     totalPlayers: 1247,
     totalPool: 45670.80,
@@ -55,64 +31,6 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     setPoolBalance(realXrpOracle.getPoolBalance());
   };
 
-  // Initialize and update rounds
-  useEffect(() => {
-    const updateRounds = () => {
-      const now = Date.now();
-      const roundDuration = 60000; // 1 minute  
-      const gameStartTime = getGameStartTime();
-      const timeSinceStart = now - gameStartTime;
-      const currentRoundIndex = Math.floor(timeSinceStart / roundDuration);
-      
-      const newRounds: Round[] = [];
-      
-      // Create current live round and more upcoming rounds
-      for (let i = currentRoundIndex - 2; i < currentRoundIndex + 8; i++) {
-        const roundStartTime = gameStartTime + (i * roundDuration);
-        const roundEndTime = roundStartTime + roundDuration;
-        const timeLeft = Math.max(0, Math.ceil((roundEndTime - now) / 1000));
-        
-        let status: 'live' | 'next' | 'completed' = 'next';
-        if (i === currentRoundIndex) {
-          status = 'live';
-        } else if (i < currentRoundIndex) {
-          status = 'completed';
-        }
-        
-        const round: Round = {
-          id: String(i + 1).padStart(3, '0'),
-          status,
-          timeLeft: status === 'completed' ? 0 : timeLeft,
-          bullPool: Math.random() * 1000 + 500 + (poolBalance * 0.1),
-          bearPool: Math.random() * 1000 + 500 + (poolBalance * 0.1),
-          totalPool: 0,
-          startTime: roundStartTime
-        };
-
-        // Set startPrice for live rounds using real price
-        if (status === 'live') {
-          round.startPrice = realCurrentPrice;
-        } else if (status === 'completed') {
-          round.startPrice = realCurrentPrice + (Math.random() - 0.5) * 0.01;
-          round.endPrice = realCurrentPrice + (Math.random() - 0.5) * 0.01;
-          round.result = round.endPrice! > round.startPrice! ? 'bull' : 'bear';
-        }
-        
-        round.totalPool = round.bullPool + round.bearPool;
-        newRounds.push(round);
-      }
-      
-      setRounds(newRounds);
-    };
-
-    // Initial update
-    updateRounds();
-    
-    // Update every second
-    const interval = setInterval(updateRounds, 1000);
-    return () => clearInterval(interval);
-  }, [realCurrentPrice, poolBalance]);
-
   const handlePlaceBet = (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => {
     if (!user) return;
 
@@ -120,36 +38,10 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
       ...prev,
       [roundId]: { direction, amount, token }
     }));
-
-    setRounds(prev => 
-      prev.map(round => {
-        if (round.id === roundId) {
-          const newRound = { ...round };
-          if (direction === 'bull') {
-            newRound.bullPool += amount;
-          } else {
-            newRound.bearPool += amount;
-          }
-          newRound.totalPool = newRound.bullPool + newRound.bearPool;
-          return newRound;
-        }
-        return round;
-      })
-    );
   };
 
-  const liveRound = rounds.find(r => r.status === 'live');
-  const priceMovement = liveRound?.startPrice && liveRound.startPrice !== realCurrentPrice 
-    ? (realCurrentPrice > liveRound.startPrice ? 'up' : 'down') 
-    : null;
-
   return (
-    <div className="space-y-6 font-outfit" style={{
-      backgroundColor: priceMovement === 'up' ? 'rgba(34, 197, 94, 0.05)' : 
-                     priceMovement === 'down' ? 'rgba(239, 68, 68, 0.05)' : 
-                     'transparent',
-      transition: 'background-color 0.5s ease'
-    }}>
+    <div className="space-y-6 font-outfit">
       {/* Live Price Tracker */}
       <LivePriceTracker onPriceUpdate={handlePriceUpdate} />
 
@@ -225,7 +117,6 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
         </div>
         
         <BettingRounds
-          rounds={rounds}
           onPlaceBet={handlePlaceBet}
           userBets={userBets}
           currentPrice={realCurrentPrice}
@@ -239,8 +130,8 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
           <h3 className="text-xl font-orbitron font-bold text-white">LIVE CHART</h3>
           <CandleChart 
             currentPrice={realCurrentPrice}
-            gameActive={rounds.some(r => r.status === 'live')}
-            timeLeft={rounds.find(r => r.status === 'live')?.timeLeft || 0}
+            gameActive={true}
+            timeLeft={60}
             onRoundEnd={() => {}}
           />
         </div>

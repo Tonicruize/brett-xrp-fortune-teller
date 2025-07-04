@@ -1,10 +1,9 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TrendingUp, TrendingDown, Clock, X } from 'lucide-react';
-import { realXrpOracle } from '@/services/realXrpOracle';
+import { roundManager } from '@/services/roundManager';
 
 interface Round {
   id: string;
@@ -16,17 +15,18 @@ interface Round {
   bearPool: number;
   totalPool: number;
   result?: 'bull' | 'bear';
+  roundNumber: number;
 }
 
 interface BettingRoundsProps {
-  rounds: Round[];
   onPlaceBet: (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => void;
   userBets: { [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } };
   currentPrice: number;
   user: any;
 }
 
-export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user }: BettingRoundsProps) => {
+export const BettingRounds = ({ onPlaceBet, userBets, currentPrice, user }: BettingRoundsProps) => {
+  const [rounds, setRounds] = useState<Round[]>([]);
   const [bettingState, setBettingState] = useState<{
     roundId: string | null;
     direction: 'bull' | 'bear' | null;
@@ -39,8 +39,27 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     token: 'xrp'
   });
 
-  // Get real pool balance from oracle
-  const poolBalance = realXrpOracle.getPoolBalance();
+  useEffect(() => {
+    const initializeAndStart = async () => {
+      await roundManager.initializeRounds(currentPrice);
+      const initialRounds = await roundManager.getRounds();
+      setRounds(initialRounds);
+      
+      roundManager.startUpdates((updatedRounds) => {
+        setRounds(updatedRounds);
+      });
+    };
+
+    initializeAndStart();
+
+    return () => {
+      roundManager.stopUpdates();
+    };
+  }, []);
+
+  useEffect(() => {
+    roundManager.updatePrice(currentPrice);
+  }, [currentPrice]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -99,13 +118,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     const movement = round.startPrice ? getPriceMovement(round.startPrice, currentPrice) : 'same';
     const priceChange = round.startPrice ? getPriceChange(round.startPrice, currentPrice) : '0.000';
     const isBetting = bettingState.roundId === round.id;
-    // Only allow betting on 'next' rounds, not live ones
     const canBet = user && round.status === 'next' && !userBet;
-
-    // Use pool balance for display instead of mock data
-    const displayBullPool = poolBalance * 0.4 + (round.bullPool * 0.1);
-    const displayBearPool = poolBalance * 0.35 + (round.bearPool * 0.1);
-    const displayTotalPool = displayBullPool + displayBearPool;
 
     return (
       <Card key={round.id} className={`bg-slate-900 border-2 min-w-[300px] flex-shrink-0 transition-all duration-300 ${
@@ -115,7 +128,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
           {/* Header with Clock and Round Number */}
           <div className="flex items-center justify-center gap-2 mb-4 bg-slate-800 rounded-lg p-3">
             <Clock className="w-5 h-5 text-yellow-400" />
-            <span className="font-orbitron font-bold text-white">ROUND #{round.id}</span>
+            <span className="font-orbitron font-bold text-white">ROUND #{round.roundNumber.toString().padStart(3, '0')}</span>
             <div className="ml-auto text-yellow-400 font-orbitron font-bold text-lg">
               {formatTime(round.timeLeft)}
             </div>
@@ -156,7 +169,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
             <div className="text-center mb-2">
               <div className="text-xs text-slate-400">TOTAL POOL</div>
               <div className="text-xl font-orbitron font-bold text-yellow-400">
-                {displayTotalPool.toFixed(2)} XRP
+                {round.totalPool.toFixed(2)} XRP
               </div>
             </div>
           </div>
@@ -257,7 +270,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                     <div className="text-center">
                       <div className="text-xs text-slate-400">Pool</div>
                       <div className="text-sm font-orbitron font-bold text-green-400">
-                        {displayBullPool.toFixed(2)} XRP
+                        {round.bullPool.toFixed(2)} XRP
                       </div>
                     </div>
                   </div>
@@ -275,7 +288,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                     <div className="text-center">
                       <div className="text-xs text-slate-400">Pool</div>
                       <div className="text-sm font-orbitron font-bold text-red-400">
-                        {displayBearPool.toFixed(2)} XRP
+                        {round.bearPool.toFixed(2)} XRP
                       </div>
                     </div>
                   </div>
@@ -350,16 +363,6 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
           {rounds.map(renderRound)}
         </div>
       </div>
-      
-      <style>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 };
