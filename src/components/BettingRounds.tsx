@@ -1,25 +1,14 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TrendingUp, TrendingDown, Clock, X } from 'lucide-react';
 import { realXrpOracle } from '@/services/realXrpOracle';
-
-interface Round {
-  id: string;
-  status: 'live' | 'next' | 'completed';
-  timeLeft: number;
-  startPrice?: number;
-  endPrice?: number;
-  bullPool: number;
-  bearPool: number;
-  totalPool: number;
-  result?: 'bull' | 'bear';
-}
+import { roundManager, RoundData } from '@/services/roundManager';
 
 interface BettingRoundsProps {
-  rounds: Round[];
+  rounds: RoundData[];
   onPlaceBet: (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => void;
   userBets: { [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } };
   currentPrice: number;
@@ -39,7 +28,6 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     token: 'xrp'
   });
 
-  // Get real pool balance from oracle
   const poolBalance = realXrpOracle.getPoolBalance();
 
   const formatTime = (seconds: number) => {
@@ -48,13 +36,9 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getPriceMovement = (startPrice: number, currentPrice: number) => {
-    if (startPrice === currentPrice) return 'same';
-    return currentPrice > startPrice ? 'up' : 'down';
-  };
-
-  const getPriceChange = (startPrice: number, currentPrice: number) => {
-    return ((currentPrice - startPrice) / startPrice * 100).toFixed(3);
+  const getTimeLeft = (endTime: number) => {
+    const now = Date.now();
+    return Math.max(0, Math.ceil((endTime - now) / 1000));
   };
 
   const handleDirectionSelect = (roundId: string, direction: 'bull' | 'bear') => {
@@ -94,70 +78,155 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     });
   };
 
-  const renderRound = (round: Round) => {
-    const userBet = userBets[round.id];
-    const movement = round.startPrice ? getPriceMovement(round.startPrice, currentPrice) : 'same';
-    const priceChange = round.startPrice ? getPriceChange(round.startPrice, currentPrice) : '0.000';
-    const isBetting = bettingState.roundId === round.id;
-    // Only allow betting on 'next' rounds, not live ones
-    const canBet = user && round.status === 'next' && !userBet;
+  const renderCompletedRound = (round: RoundData) => {
+    const isWinning = round.result === 'bull' ? round.percentage_change! > 0 : round.percentage_change! < 0;
+    
+    return (
+      <Card key={round.id} className="bg-slate-900 border border-slate-700 min-w-[280px] flex-shrink-0">
+        <div className="p-4 font-outfit">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 bg-slate-800 rounded-lg p-3">
+            <span className="font-orbitron font-bold text-white">#{round.round_number}</span>
+            <span className="text-slate-400 text-sm font-outfit">ENDED</span>
+          </div>
 
-    // Use pool balance for display instead of mock data
-    const displayBullPool = poolBalance * 0.4 + (round.bullPool * 0.1);
-    const displayBearPool = poolBalance * 0.35 + (round.bearPool * 0.1);
-    const displayTotalPool = displayBullPool + displayBearPool;
+          {/* Price Info */}
+          <div className="text-center mb-4 space-y-2">
+            <div className="text-2xl font-orbitron font-bold text-white">
+              ${round.end_price?.toFixed(6)}
+            </div>
+            <div className="text-sm text-slate-400 font-outfit">
+              Start: ${round.start_price?.toFixed(6)}
+            </div>
+            <div className={`text-lg font-orbitron font-bold ${
+              (round.percentage_change || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {(round.percentage_change || 0) >= 0 ? '+' : ''}{round.percentage_change?.toFixed(3)}%
+            </div>
+          </div>
+
+          {/* Pool Info */}
+          <div className="text-center mb-4 bg-slate-800 rounded-lg p-3">
+            <div className="text-xs text-slate-400 font-outfit mb-1">TOTAL POOL</div>
+            <div className="text-lg font-orbitron font-bold text-yellow-400">
+              {round.total_pool.toFixed(2)} XRP
+            </div>
+          </div>
+
+          {/* Result */}
+          <div className="text-center">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+              round.result === 'bull' 
+                ? 'bg-green-500/20 text-green-400' 
+                : 'bg-red-500/20 text-red-400'
+            }`}>
+              {round.result === 'bull' ? (
+                <TrendingUp className="w-4 h-4" />
+              ) : (
+                <TrendingDown className="w-4 h-4" />
+              )}
+              <span className="font-orbitron font-bold text-sm">
+                {round.result?.toUpperCase()} WON
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderLiveRound = (round: RoundData) => {
+    const timeLeft = getTimeLeft(round.end_time);
+    const percentageChange = round.start_price 
+      ? ((currentPrice - round.start_price) / round.start_price) * 100 
+      : 0;
 
     return (
-      <Card key={round.id} className={`bg-slate-900 border-2 min-w-[300px] flex-shrink-0 transition-all duration-300 ${
-        isBetting ? 'border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-slate-700'
-      }`}>
-        <div className="p-4">
-          {/* Header with Clock and Round Number */}
-          <div className="flex items-center justify-center gap-2 mb-4 bg-slate-800 rounded-lg p-3">
-            <Clock className="w-5 h-5 text-yellow-400" />
-            <span className="font-orbitron font-bold text-white">ROUND #{round.id}</span>
-            <div className="ml-auto text-yellow-400 font-orbitron font-bold text-lg">
-              {formatTime(round.timeLeft)}
+      <Card key={round.id} className="bg-slate-900 border-2 border-yellow-500 min-w-[280px] flex-shrink-0">
+        <div className="p-4 font-outfit">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 bg-yellow-500/20 rounded-lg p-3">
+            <span className="font-orbitron font-bold text-white">#{round.round_number}</span>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-yellow-400" />
+              <span className="text-yellow-400 font-orbitron font-bold">
+                {formatTime(timeLeft)}
+              </span>
             </div>
           </div>
 
-          {/* Price Display */}
-          <div className="text-center mb-4 bg-slate-800 rounded-lg p-4">
-            <div className="text-xs text-slate-400 mb-1">LIVE PRICE</div>
-            <div className="text-2xl font-orbitron font-bold text-white mb-2">
+          {/* Price Info */}
+          <div className="text-center mb-4 space-y-2">
+            <div className="text-2xl font-orbitron font-bold text-white">
               ${currentPrice.toFixed(6)}
             </div>
-            
-            {round.startPrice && (
-              <>
-                <div className="text-xs text-slate-400 mb-1">START PRICE</div>
-                <div className="text-lg font-orbitron font-semibold text-slate-300 mb-2">
-                  ${round.startPrice.toFixed(6)}
-                </div>
-                
-                {/* Movement Indicator */}
-                <div className={`flex items-center justify-center gap-1 px-3 py-1 rounded-full text-sm font-orbitron font-bold ${
-                  movement === 'up' ? 'bg-green-500/20 text-green-400' : 
-                  movement === 'down' ? 'bg-red-500/20 text-red-400' : 
-                  'bg-slate-500/20 text-slate-400'
-                }`}>
-                  {movement === 'up' && <TrendingUp className="w-4 h-4" />}
-                  {movement === 'down' && <TrendingDown className="w-4 h-4" />}
-                  <span>
-                    {movement === 'up' ? '+' : movement === 'down' ? '' : ''}{priceChange}%
-                  </span>
-                </div>
-              </>
-            )}
+            <div className="text-sm text-slate-400 font-outfit">
+              Start: ${round.start_price?.toFixed(6)}
+            </div>
+            <div className={`text-lg font-orbitron font-bold ${
+              percentageChange >= 0 ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {percentageChange >= 0 ? '+' : ''}{percentageChange.toFixed(3)}%
+            </div>
           </div>
 
-          {/* Pool Display */}
-          <div className="mb-4 p-3 bg-slate-800 rounded-lg">
-            <div className="text-center mb-2">
-              <div className="text-xs text-slate-400">TOTAL POOL</div>
-              <div className="text-xl font-orbitron font-bold text-yellow-400">
-                {displayTotalPool.toFixed(2)} XRP
-              </div>
+          {/* Pool Info */}
+          <div className="text-center mb-4 bg-slate-800 rounded-lg p-3">
+            <div className="text-xs text-slate-400 font-outfit mb-1">TOTAL POOL</div>
+            <div className="text-lg font-orbitron font-bold text-yellow-400">
+              {round.total_pool.toFixed(2)} XRP
+            </div>
+          </div>
+
+          {/* Live Indicator */}
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-400">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="font-orbitron font-bold text-sm">LIVE</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderNextRound = (round: RoundData) => {
+    const timeLeft = getTimeLeft(round.start_time);
+    const userBet = userBets[round.id];
+    const isBetting = bettingState.roundId === round.id;
+    const canBet = user && !userBet;
+
+    return (
+      <Card key={round.id} className={`bg-slate-900 border-2 min-w-[280px] flex-shrink-0 transition-all duration-300 ${
+        isBetting ? 'border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-slate-700'
+      }`}>
+        <div className="p-4 font-outfit">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 bg-slate-800 rounded-lg p-3">
+            <span className="font-orbitron font-bold text-white">#{round.round_number}</span>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-400 font-orbitron font-bold">
+                {formatTime(timeLeft)}
+              </span>
+            </div>
+          </div>
+
+          {/* Current Price (no start price yet) */}
+          <div className="text-center mb-4 space-y-2">
+            <div className="text-2xl font-orbitron font-bold text-white">
+              ${currentPrice.toFixed(6)}
+            </div>
+            <div className="text-sm text-slate-400 font-outfit">
+              Current Price
+            </div>
+          </div>
+
+          {/* Pool Info */}
+          <div className="text-center mb-4 bg-slate-800 rounded-lg p-3">
+            <div className="text-xs text-slate-400 font-outfit mb-1">TOTAL POOL</div>
+            <div className="text-lg font-orbitron font-bold text-yellow-400">
+              {round.total_pool.toFixed(2)} XRP
             </div>
           </div>
 
@@ -184,36 +253,36 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">AMOUNT</label>
+                    <label className="text-xs text-slate-400 block mb-1 font-outfit">AMOUNT</label>
                     <Input
                       type="number"
                       value={bettingState.amount}
                       onChange={(e) => setBettingState(prev => ({ ...prev, amount: e.target.value }))}
-                      className="bg-slate-800 border-slate-600 text-white"
+                      className="bg-slate-800 border-slate-600 text-white font-outfit"
                       placeholder="Enter amount"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs text-slate-400 block mb-2">TOKEN</label>
+                    <label className="text-xs text-slate-400 block mb-2 font-outfit">TOKEN</label>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         onClick={() => setBettingState(prev => ({ ...prev, token: 'xrp' }))}
                         variant={bettingState.token === 'xrp' ? 'default' : 'outline'}
-                        className={bettingState.token === 'xrp' 
+                        className={`font-outfit ${bettingState.token === 'xrp' 
                           ? 'bg-blue-600 hover:bg-blue-700' 
                           : 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700'
-                        }
+                        }`}
                       >
                         XRP
                       </Button>
                       <Button
                         onClick={() => setBettingState(prev => ({ ...prev, token: 'brett' }))}
                         variant={bettingState.token === 'brett' ? 'default' : 'outline'}
-                        className={bettingState.token === 'brett' 
+                        className={`font-outfit ${bettingState.token === 'brett' 
                           ? 'bg-purple-600 hover:bg-purple-700' 
                           : 'bg-slate-800 border-slate-600 text-white hover:bg-slate-700'
-                        }
+                        }`}
                       >
                         BRETT
                       </Button>
@@ -224,14 +293,14 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                     <Button
                       onClick={handleCancel}
                       variant="outline"
-                      className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700"
+                      className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700 font-outfit"
                     >
                       <X className="w-4 h-4 mr-1" />
                       CANCEL
                     </Button>
                     <Button
                       onClick={handleConfirmBet}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold"
+                      className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold font-outfit"
                     >
                       CONFIRM
                     </Button>
@@ -239,104 +308,52 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                 </div>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Betting Buttons - Only show for next rounds */}
-              {round.status === 'next' && (
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {/* UP Button */}
-                  <div className="space-y-2">
-                    <Button
-                      onClick={() => handleDirectionSelect(round.id, 'bull')}
-                      disabled={!canBet}
-                      className="w-full h-12 bg-green-700 hover:bg-green-600 disabled:opacity-50 font-orbitron font-bold"
-                    >
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      UP
-                    </Button>
-                    <div className="text-center">
-                      <div className="text-xs text-slate-400">Pool</div>
-                      <div className="text-sm font-orbitron font-bold text-green-400">
-                        {displayBullPool.toFixed(2)} XRP
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* DOWN Button */}
-                  <div className="space-y-2">
-                    <Button
-                      onClick={() => handleDirectionSelect(round.id, 'bear')}
-                      disabled={!canBet}
-                      className="w-full h-12 bg-red-700 hover:bg-red-600 disabled:opacity-50 font-orbitron font-bold"
-                    >
-                      <TrendingDown className="w-4 h-4 mr-2" />
-                      DOWN
-                    </Button>
-                    <div className="text-center">
-                      <div className="text-xs text-slate-400">Pool</div>
-                      <div className="text-sm font-orbitron font-bold text-red-400">
-                        {displayBearPool.toFixed(2)} XRP
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Live Round Display - No betting allowed */}
-              {round.status === 'live' && (
-                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-center">
-                  <div className="text-yellow-400 font-orbitron font-bold text-sm">
-                    ROUND IN PROGRESS
-                  </div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    Betting closed - round is live
-                  </div>
-                </div>
-              )}
-
-              {/* User Bet Display - Only show if there's a bet */}
-              {userBet && (
-                <div className={`p-3 rounded-lg border ${
-                  userBet.direction === 'bull' 
-                    ? 'border-green-500 bg-green-900/20' 
-                    : 'border-red-500 bg-red-900/20'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {userBet.direction === 'bull' ? (
-                        <TrendingUp className="w-4 h-4 text-green-400" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4 text-red-400" />
-                      )}
-                      <span className={`font-orbitron font-bold text-xs ${
-                        userBet.direction === 'bull' ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        YOUR BET: {userBet.direction.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-orbitron font-bold text-sm">
-                        {userBet.amount} {userBet.token.toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Round Status */}
-          <div className="mt-3 text-center">
-            <span className={`px-3 py-1 rounded-full text-xs font-orbitron font-bold ${
-              round.status === 'live' ? 'bg-green-500/20 text-green-400' :
-              round.status === 'next' ? 'bg-yellow-500/20 text-yellow-400' :
-              'bg-slate-500/20 text-slate-400'
+          ) : userBet ? (
+            <div className={`p-3 rounded-lg border ${
+              userBet.direction === 'bull' 
+                ? 'border-green-500 bg-green-900/20' 
+                : 'border-red-500 bg-red-900/20'
             }`}>
-              {round.status === 'live' ? 'LIVE' : 
-               round.status === 'next' ? 'NEXT' : 
-               'ENDED'}
-            </span>
-          </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {userBet.direction === 'bull' ? (
+                    <TrendingUp className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-400" />
+                  )}
+                  <span className={`font-orbitron font-bold text-xs ${
+                    userBet.direction === 'bull' ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    YOUR BET: {userBet.direction.toUpperCase()}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <div className="text-white font-orbitron font-bold text-sm">
+                    {userBet.amount} {userBet.token.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={() => handleDirectionSelect(round.id, 'bull')}
+                disabled={!canBet}
+                className="w-full h-12 bg-green-700 hover:bg-green-600 disabled:opacity-50 font-orbitron font-bold"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                UP
+              </Button>
+              <Button
+                onClick={() => handleDirectionSelect(round.id, 'bear')}
+                disabled={!canBet}
+                className="w-full h-12 bg-red-700 hover:bg-red-600 disabled:opacity-50 font-orbitron font-bold"
+              >
+                <TrendingDown className="w-4 h-4 mr-2" />
+                DOWN
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
     );
@@ -344,22 +361,19 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
 
   return (
     <div className="space-y-6">
-      {/* Horizontal Scroll Container - Hidden scrollbar */}
       <div className="overflow-x-auto scrollbar-hide">
         <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
-          {rounds.map(renderRound)}
+          {rounds.map((round) => {
+            if (round.status === 'completed') {
+              return renderCompletedRound(round);
+            } else if (round.status === 'live') {
+              return renderLiveRound(round);
+            } else {
+              return renderNextRound(round);
+            }
+          })}
         </div>
       </div>
-      
-      <style>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 };
