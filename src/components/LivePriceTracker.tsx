@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
-import { xrpOracle } from '@/services/xrpOracle';
+import { realXrpOracle } from '@/services/realXrpOracle';
 
 interface LivePriceTrackerProps {
   onPriceUpdate: (price: number) => void;
@@ -12,30 +12,30 @@ export const LivePriceTracker = ({ onPriceUpdate }: LivePriceTrackerProps) => {
   const [currentPrice, setCurrentPrice] = useState(0);
   const [previousPrice, setPreviousPrice] = useState(0);
   const [change24h, setChange24h] = useState(0);
+  const [volume24h, setVolume24h] = useState(0);
+  const [high24h, setHigh24h] = useState(0);
+  const [low24h, setLow24h] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   useEffect(() => {
     setIsConnected(true);
     
-    xrpOracle.startPriceUpdates((data) => {
+    const handlePriceUpdate = (data: any) => {
       setPreviousPrice(currentPrice);
       setCurrentPrice(data.price);
-      setChange24h(data.change24h || 0);
+      setChange24h(data.change24h);
+      setVolume24h(data.volume24h);
+      setHigh24h(data.high24h || currentPrice);
+      setLow24h(data.low24h || currentPrice);
       setLastUpdate(new Date());
       onPriceUpdate(data.price);
-    });
+    };
 
-    // Initial price fetch
-    xrpOracle.getCurrentPrice().then((data) => {
-      setCurrentPrice(data.price);
-      setChange24h(data.change24h || 0);
-      setLastUpdate(new Date());
-      onPriceUpdate(data.price);
-    });
+    realXrpOracle.startPriceUpdates(handlePriceUpdate);
 
     return () => {
-      xrpOracle.stopPriceUpdates();
+      realXrpOracle.stopPriceUpdates();
       setIsConnected(false);
     };
   }, [onPriceUpdate, currentPrice]);
@@ -92,17 +92,37 @@ export const LivePriceTracker = ({ onPriceUpdate }: LivePriceTrackerProps) => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-4">
+      <div className="grid grid-cols-4 gap-4 mt-4">
         <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-          <div className="text-xs text-slate-400 font-inter mb-1">STATUS</div>
-          <div className={`text-sm font-orbitron font-bold ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-            {isConnected ? 'LIVE' : 'DISCONNECTED'}
+          <div className="text-xs text-slate-400 font-inter mb-1">24H HIGH</div>
+          <div className="text-sm font-orbitron font-bold text-green-400">
+            ${high24h.toFixed(6)}
           </div>
         </div>
         <div className="bg-slate-800/50 rounded-lg p-3 text-center">
-          <div className="text-xs text-slate-400 font-inter mb-1">PRECISION</div>
-          <div className="text-sm font-orbitron font-bold text-yellow-400">FULL</div>
+          <div className="text-xs text-slate-400 font-inter mb-1">24H LOW</div>
+          <div className="text-sm font-orbitron font-bold text-red-400">
+            ${low24h.toFixed(6)}
+          </div>
         </div>
+        <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+          <div className="text-xs text-slate-400 font-inter mb-1">VOLUME</div>
+          <div className="text-sm font-orbitron font-bold text-yellow-400">
+            {(volume24h / 1000000).toFixed(1)}M
+          </div>
+        </div>
+        <div className="bg-slate-800/50 rounded-lg p-3 text-center">
+          <div className="text-xs text-slate-400 font-inter mb-1">STATUS</div>
+          <div className={`text-sm font-orbitron font-bold ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+            {isConnected ? 'LIVE' : 'OFFLINE'}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 text-center">
+        <p className="text-xs text-slate-500 font-inter">
+          Live data from Binance & CoinGecko APIs • Updates every 2 seconds
+        </p>
       </div>
     </Card>
   );

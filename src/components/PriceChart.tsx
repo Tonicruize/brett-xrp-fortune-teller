@@ -1,7 +1,9 @@
+
 import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { realXrpOracle } from '@/services/realXrpOracle';
 
 interface PriceChartProps {
   currentPrice: number;
@@ -25,74 +27,44 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
   const [isLoading, setIsLoading] = useState(true);
   const [previousPrice, setPreviousPrice] = useState(0);
 
-  // Real-time XRP price fetching with maximum precision
-  const fetchXRPPrice = async () => {
-    try {
-      const apiCalls = [
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&precision=full'),
-        fetch('https://api.coinbase.com/v2/exchange-rates?currency=XRP'),
-        fetch('https://min-api.cryptocompare.com/data/price?fsym=XRP&tsyms=USD')
-      ];
-
-      const response = await Promise.race(apiCalls);
-      let price = 0;
-      let change = 0;
-      let volume = 0;
-
-      if (response.url.includes('coingecko')) {
-        const data = await response.json();
-        price = parseFloat(data.ripple.usd);
-        change = data.ripple.usd_24h_change || 0;
-        volume = data.ripple.usd_24h_vol || 0;
-      } else if (response.url.includes('coinbase')) {
-        const data = await response.json();
-        price = parseFloat(data.data.rates.USD);
-      } else {
-        const data = await response.json();
-        price = parseFloat(data.USD);
-      }
-
-      if (price > 0) {
-        setPreviousPrice(currentPrice);
-        onPriceUpdate(price);
-        
-        const now = new Date();
-        const newDataPoint: PriceData = {
-          time: now.toLocaleTimeString('en-US', { 
-            hour12: false, 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            second: '2-digit' 
-          }),
-          price: price,
-          timestamp: now.getTime()
-        };
-
-        setPriceHistory(prev => {
-          const updated = [...prev, newDataPoint];
-          return updated.slice(-60); // Keep last 60 data points
-        });
-
-        setPriceStats(prev => ({
-          change24h: change,
-          volume: volume,
-          high: Math.max(prev.high, price),
-          low: prev.low === 0 ? price : Math.min(prev.low, price)
-        }));
-
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error('Error fetching XRP price:', error);
-    }
-  };
-
   useEffect(() => {
-    fetchXRPPrice();
-    // Update every 500ms for real-time feel
-    const interval = setInterval(fetchXRPPrice, 500);
-    return () => clearInterval(interval);
-  }, []);
+    const handlePriceUpdate = (data: any) => {
+      setPreviousPrice(currentPrice);
+      onPriceUpdate(data.price);
+      
+      const now = new Date();
+      const newDataPoint: PriceData = {
+        time: now.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit' 
+        }),
+        price: data.price,
+        timestamp: now.getTime()
+      };
+
+      setPriceHistory(prev => {
+        const updated = [...prev, newDataPoint];
+        return updated.slice(-60); // Keep last 60 data points
+      });
+
+      setPriceStats({
+        change24h: data.change24h,
+        volume: data.volume24h,
+        high: data.high24h || data.price,
+        low: data.low24h || data.price
+      });
+
+      setIsLoading(false);
+    };
+
+    realXrpOracle.startPriceUpdates(handlePriceUpdate);
+
+    return () => {
+      realXrpOracle.stopPriceUpdates();
+    };
+  }, [onPriceUpdate, currentPrice]);
 
   const isPositive = priceStats.change24h >= 0;
   const priceDirection = currentPrice > previousPrice ? 'up' : currentPrice < previousPrice ? 'down' : 'same';
@@ -220,7 +192,7 @@ export const PriceChart = ({ currentPrice, onPriceUpdate }: PriceChartProps) => 
 
         <div className="mt-4 text-center">
           <p className="text-xs text-slate-500">
-            Live updates every 500ms • Full 8-decimal precision • No approximation
+            Live data from Binance & CoinGecko APIs • Real-time updates every 2 seconds
           </p>
         </div>
       </div>
