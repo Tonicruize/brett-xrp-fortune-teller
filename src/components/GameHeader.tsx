@@ -14,7 +14,7 @@ interface GameHeaderProps {
 
 export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: GameHeaderProps) => {
   const [brettPrice, setBrettPrice] = useState(0.0001234);
-  const [xrpPrice, setXrpPrice] = useState(0);
+  const [xrpPrice, setXrpPrice] = useState(0.62567890);
   const [poolBalance, setPoolBalance] = useState(0);
   const { signOut } = useAuth();
 
@@ -60,7 +60,7 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
             />
             <div>
               <h1 className="text-2xl font-orbitron font-black text-white">BRETT CASINO</h1>
-              <p className="text-slate-400 text-sm font-outfit">Professional Gaming Platform</p>
+              <p className="text-slate-400 text-sm">Professional Gaming Platform</p>
             </div>
           </div>
 
@@ -68,7 +68,7 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
           <div className="flex items-center gap-4 bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <div className="text-xs font-outfit">
+              <div className="text-xs">
                 <div className="text-slate-400">XRP</div>
                 <div className="text-green-400 font-orbitron font-bold">
                   ${xrpPrice.toFixed(6)}
@@ -78,7 +78,7 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
             <div className="w-px h-8 bg-slate-700"></div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-              <div className="text-xs font-outfit">
+              <div className="text-xs">
                 <div className="text-slate-400">BRETT</div>
                 <div className="text-purple-400 font-orbitron font-bold">
                   ${brettPrice.toFixed(8)}
@@ -88,7 +88,7 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
             <div className="w-px h-8 bg-slate-700"></div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-              <div className="text-xs font-outfit">
+              <div className="text-xs">
                 <div className="text-slate-400">POOL</div>
                 <div className="text-yellow-400 font-orbitron font-bold">
                   {poolBalance.toFixed(2)} XRP
@@ -101,11 +101,11 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
           {user ? (
             <div className="flex items-center gap-3">
               {/* User Info */}
-              <div className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-lg">
-                <div className="text-white font-semibold text-sm font-outfit">
+              <div className="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg">
+                <div className="text-white font-bold text-sm">
                   {profile?.username || user.email?.split('@')[0] || 'Player'}
                 </div>
-                <div className="text-yellow-500 text-xs font-outfit">Online</div>
+                <div className="text-yellow-500 text-xs">Online</div>
               </div>
               
               {/* Connect Wallet Button */}
@@ -114,7 +114,7 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
                   onClick={onShowWalletConnect}
                   variant="outline" 
                   size="sm"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-800 font-outfit"
+                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
                   CONNECT
@@ -126,7 +126,7 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
                 onClick={handleLogout}
                 variant="outline" 
                 size="sm"
-                className="border-slate-600 text-slate-300 hover:bg-slate-800 font-outfit"
+                className="border-slate-600 text-slate-300 hover:bg-slate-800"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 LOGOUT
@@ -135,7 +135,7 @@ export const GameHeader = ({ user, profile, onShowAuth, onShowWalletConnect }: G
           ) : (
             <Button 
               onClick={onShowAuth}
-              className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold px-6 font-outfit"
+              className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold px-6"
             >
               <User className="w-4 h-4 mr-2" />
               LOGIN

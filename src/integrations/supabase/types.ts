@@ -9,51 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      game_rounds: {
-        Row: {
-          created_at: string
-          end_price: number | null
-          end_time: string
-          id: string
-          percentage_change: number | null
-          result: string | null
-          round_number: number
-          start_price: number | null
-          start_time: string
-          status: string
-          total_pool: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          end_price?: number | null
-          end_time: string
-          id?: string
-          percentage_change?: number | null
-          result?: string | null
-          round_number: number
-          start_price?: number | null
-          start_time: string
-          status: string
-          total_pool?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          end_price?: number | null
-          end_time?: string
-          id?: string
-          percentage_change?: number | null
-          result?: string | null
-          round_number?: number
-          start_price?: number | null
-          start_time?: string
-          status?: string
-          total_pool?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           created_at: string

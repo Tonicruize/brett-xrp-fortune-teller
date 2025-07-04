@@ -66,29 +66,28 @@
 @layer base {
   * {
     @apply border-border;
-    font-family: 'Outfit', system-ui, sans-serif !important;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Outfit', system-ui, sans-serif !important;
+    font-family: 'Outfit', system-ui, sans-serif;
   }
   
-  /* Apply Outfit font to all elements by default */
-  h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, label, a, li, ul, ol, table, th, td, select, option {
-    font-family: 'Outfit', system-ui, sans-serif !important;
+  /* Apply Outfit font to all elements */
+  * {
+    font-family: 'Outfit', system-ui, sans-serif;
   }
 }
 
 .font-outfit {
-  font-family: 'Outfit', system-ui, sans-serif !important;
+  font-family: 'Outfit', system-ui, sans-serif;
 }
 
 .font-orbitron {
-  font-family: 'Orbitron', monospace !important;
+  font-family: 'Orbitron', monospace;
 }
 
 .font-inter {
-  font-family: 'Outfit', system-ui, sans-serif !important;
+  font-family: 'Outfit', system-ui, sans-serif;
 }
 
 /* Hide scrollbars globally */

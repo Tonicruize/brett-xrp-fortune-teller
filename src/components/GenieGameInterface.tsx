@@ -7,7 +7,19 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trophy, Users, DollarSign, BarChart3, EyeOff } from 'lucide-react';
 import { realXrpOracle } from '@/services/realXrpOracle';
-import { roundManager, RoundData } from '@/services/roundManager';
+
+interface Round {
+  id: string;
+  status: 'live' | 'next' | 'completed';
+  timeLeft: number;
+  startPrice?: number;
+  endPrice?: number;
+  bullPool: number;
+  bearPool: number;
+  totalPool: number;
+  result?: 'bull' | 'bear';
+  startTime: number;
+}
 
 interface GenieGameInterfaceProps {
   currentPrice: number;
@@ -16,11 +28,21 @@ interface GenieGameInterfaceProps {
 
 export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfaceProps) => {
   const [showChart, setShowChart] = useState(false);
-  const [rounds, setRounds] = useState<RoundData[]>([]);
+  const [rounds, setRounds] = useState<Round[]>([]);
   const [userBets, setUserBets] = useState<{ [roundId: string]: { direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett' } }>({});
   const [realCurrentPrice, setRealCurrentPrice] = useState(currentPrice);
   const [poolBalance, setPoolBalance] = useState(0);
   
+  // Get persistent game start time using epoch-based calculation
+  const getGameStartTime = () => {
+    const epochStart = new Date('2025-01-01T00:00:00Z').getTime();
+    const roundDuration = 60000; // 1 minute
+    const now = Date.now();
+    const timeSinceEpoch = now - epochStart;
+    const currentRoundIndex = Math.floor(timeSinceEpoch / roundDuration);
+    return epochStart + (currentRoundIndex * roundDuration);
+  };
+
   const [stats] = useState({
     totalPlayers: 1247,
     totalPool: 45670.80,
@@ -35,13 +57,51 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
 
   // Initialize and update rounds
   useEffect(() => {
-    const initializeRounds = async () => {
-      await roundManager.initializeRounds();
-    };
-    initializeRounds();
-
     const updateRounds = () => {
-      const newRounds = roundManager.generateRounds(realCurrentPrice, poolBalance);
+      const now = Date.now();
+      const roundDuration = 60000; // 1 minute  
+      const gameStartTime = getGameStartTime();
+      const timeSinceStart = now - gameStartTime;
+      const currentRoundIndex = Math.floor(timeSinceStart / roundDuration);
+      
+      const newRounds: Round[] = [];
+      
+      // Create current live round and more upcoming rounds
+      for (let i = currentRoundIndex - 2; i < currentRoundIndex + 8; i++) {
+        const roundStartTime = gameStartTime + (i * roundDuration);
+        const roundEndTime = roundStartTime + roundDuration;
+        const timeLeft = Math.max(0, Math.ceil((roundEndTime - now) / 1000));
+        
+        let status: 'live' | 'next' | 'completed' = 'next';
+        if (i === currentRoundIndex) {
+          status = 'live';
+        } else if (i < currentRoundIndex) {
+          status = 'completed';
+        }
+        
+        const round: Round = {
+          id: String(i + 1).padStart(3, '0'),
+          status,
+          timeLeft: status === 'completed' ? 0 : timeLeft,
+          bullPool: Math.random() * 1000 + 500 + (poolBalance * 0.1),
+          bearPool: Math.random() * 1000 + 500 + (poolBalance * 0.1),
+          totalPool: 0,
+          startTime: roundStartTime
+        };
+
+        // Set startPrice for live rounds using real price
+        if (status === 'live') {
+          round.startPrice = realCurrentPrice;
+        } else if (status === 'completed') {
+          round.startPrice = realCurrentPrice + (Math.random() - 0.5) * 0.01;
+          round.endPrice = realCurrentPrice + (Math.random() - 0.5) * 0.01;
+          round.result = round.endPrice! > round.startPrice! ? 'bull' : 'bear';
+        }
+        
+        round.totalPool = round.bullPool + round.bearPool;
+        newRounds.push(round);
+      }
+      
       setRounds(newRounds);
     };
 
@@ -50,16 +110,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
     
     // Update every second
     const interval = setInterval(updateRounds, 1000);
-    
-    // Cleanup old rounds every 5 minutes
-    const cleanupInterval = setInterval(() => {
-      roundManager.cleanupOldRounds();
-    }, 5 * 60 * 1000);
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(cleanupInterval);
-    };
+    return () => clearInterval(interval);
   }, [realCurrentPrice, poolBalance]);
 
   const handlePlaceBet = (roundId: string, direction: 'bull' | 'bear', amount: number, token: 'xrp' | 'brett') => {
@@ -70,11 +121,17 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
       [roundId]: { direction, amount, token }
     }));
 
-    // Update round pool (simplified for now)
     setRounds(prev => 
       prev.map(round => {
         if (round.id === roundId) {
-          return { ...round, total_pool: round.total_pool + amount };
+          const newRound = { ...round };
+          if (direction === 'bull') {
+            newRound.bullPool += amount;
+          } else {
+            newRound.bearPool += amount;
+          }
+          newRound.totalPool = newRound.bullPool + newRound.bearPool;
+          return newRound;
         }
         return round;
       })
@@ -82,8 +139,8 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
   };
 
   const liveRound = rounds.find(r => r.status === 'live');
-  const priceMovement = liveRound?.start_price && liveRound.start_price !== realCurrentPrice 
-    ? (realCurrentPrice > liveRound.start_price ? 'up' : 'down') 
+  const priceMovement = liveRound?.startPrice && liveRound.startPrice !== realCurrentPrice 
+    ? (realCurrentPrice > liveRound.startPrice ? 'up' : 'down') 
     : null;
 
   return (
@@ -183,8 +240,7 @@ export const GenieGameInterface = ({ currentPrice, user }: GenieGameInterfacePro
           <CandleChart 
             currentPrice={realCurrentPrice}
             gameActive={rounds.some(r => r.status === 'live')}
-            timeLeft={rounds.find(r => r.status === 'live')?.end_time ? 
-              Math.max(0, Math.ceil((rounds.find(r => r.status === 'live')!.end_time - Date.now()) / 1000)) : 0}
+            timeLeft={rounds.find(r => r.status === 'live')?.timeLeft || 0}
             onRoundEnd={() => {}}
           />
         </div>
