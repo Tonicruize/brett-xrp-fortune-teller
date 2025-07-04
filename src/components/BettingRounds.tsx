@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TrendingUp, TrendingDown, Clock, X } from 'lucide-react';
+import { realXrpOracle } from '@/services/realXrpOracle';
 
 interface Round {
   id: string;
@@ -37,6 +38,9 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     amount: '10',
     token: 'xrp'
   });
+
+  // Get real pool balance from oracle
+  const poolBalance = realXrpOracle.getPoolBalance();
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -98,6 +102,11 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
     // Only allow betting on 'next' rounds, not live ones
     const canBet = user && round.status === 'next' && !userBet;
 
+    // Use pool balance for display instead of mock data
+    const displayBullPool = poolBalance * 0.4 + (round.bullPool * 0.1);
+    const displayBearPool = poolBalance * 0.35 + (round.bearPool * 0.1);
+    const displayTotalPool = displayBullPool + displayBearPool;
+
     return (
       <Card key={round.id} className={`bg-slate-900 border-2 min-w-[300px] flex-shrink-0 transition-all duration-300 ${
         isBetting ? 'border-yellow-500 shadow-lg shadow-yellow-500/20' : 'border-slate-700'
@@ -114,14 +123,14 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
 
           {/* Price Display */}
           <div className="text-center mb-4 bg-slate-800 rounded-lg p-4">
-            <div className="text-xs text-slate-400 font-inter mb-1">LIVE PRICE</div>
+            <div className="text-xs text-slate-400 mb-1">LIVE PRICE</div>
             <div className="text-2xl font-orbitron font-bold text-white mb-2">
               ${currentPrice.toFixed(6)}
             </div>
             
             {round.startPrice && (
               <>
-                <div className="text-xs text-slate-400 font-inter mb-1">START PRICE</div>
+                <div className="text-xs text-slate-400 mb-1">START PRICE</div>
                 <div className="text-lg font-orbitron font-semibold text-slate-300 mb-2">
                   ${round.startPrice.toFixed(6)}
                 </div>
@@ -140,6 +149,16 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                 </div>
               </>
             )}
+          </div>
+
+          {/* Pool Display */}
+          <div className="mb-4 p-3 bg-slate-800 rounded-lg">
+            <div className="text-center mb-2">
+              <div className="text-xs text-slate-400">TOTAL POOL</div>
+              <div className="text-xl font-orbitron font-bold text-yellow-400">
+                {displayTotalPool.toFixed(2)} XRP
+              </div>
+            </div>
           </div>
 
           {/* Betting Interface */}
@@ -165,7 +184,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs text-slate-400 font-inter block mb-1">AMOUNT</label>
+                    <label className="text-xs text-slate-400 block mb-1">AMOUNT</label>
                     <Input
                       type="number"
                       value={bettingState.amount}
@@ -176,7 +195,7 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                   </div>
 
                   <div>
-                    <label className="text-xs text-slate-400 font-inter block mb-2">TOKEN</label>
+                    <label className="text-xs text-slate-400 block mb-2">TOKEN</label>
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         onClick={() => setBettingState(prev => ({ ...prev, token: 'xrp' }))}
@@ -236,9 +255,9 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                       UP
                     </Button>
                     <div className="text-center">
-                      <div className="text-xs text-slate-400 font-inter">Pool</div>
+                      <div className="text-xs text-slate-400">Pool</div>
                       <div className="text-sm font-orbitron font-bold text-green-400">
-                        ${round.bullPool.toFixed(2)}
+                        {displayBullPool.toFixed(2)} XRP
                       </div>
                     </div>
                   </div>
@@ -254,9 +273,9 @@ export const BettingRounds = ({ rounds, onPlaceBet, userBets, currentPrice, user
                       DOWN
                     </Button>
                     <div className="text-center">
-                      <div className="text-xs text-slate-400 font-inter">Pool</div>
+                      <div className="text-xs text-slate-400">Pool</div>
                       <div className="text-sm font-orbitron font-bold text-red-400">
-                        ${round.bearPool.toFixed(2)}
+                        {displayBearPool.toFixed(2)} XRP
                       </div>
                     </div>
                   </div>

@@ -13,7 +13,7 @@ class RealXRPOracle {
   private intervalId: NodeJS.Timeout | null = null;
   private lastPrice: number = 0;
   private isRunning: boolean = false;
-  private poolWalletAddress: string = 'rPfino2rPWQJXvacvS2bct4bdXfAcWuYcw';
+  private poolWalletAddress: string = 'rMWsxSyZARVDABRPV9gff7fmqHxnWMnhrB';
   private poolBalance: number = 0;
 
   async fetchFromCoinGecko(): Promise<XRPPriceData | null> {

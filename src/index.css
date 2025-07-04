@@ -71,6 +71,11 @@
     @apply bg-background text-foreground;
     font-family: 'Outfit', system-ui, sans-serif;
   }
+  
+  /* Apply Outfit font to all elements */
+  * {
+    font-family: 'Outfit', system-ui, sans-serif;
+  }
 }
 
 .font-outfit {
@@ -82,7 +87,7 @@
 }
 
 .font-inter {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', system-ui, sans-serif;
 }
 
 /* Hide scrollbars globally */
